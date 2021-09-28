@@ -1,0 +1,2801 @@
+---
+title: "Object-Cue versus Category-Cue Experiment"
+author: "Stephen Pierzchajlo"
+output:
+  rmdformats::material:
+  #rmdformats::robobook:
+  #rmdformats::downcute:
+  #rmdformats::readthedown:
+    self_contained: true
+    thumbnails: false
+    lightbox: true
+    gallery: false
+    highlight: tango
+    code_folding: hide
+---
+
+# Paper Summary
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Identifying environmental objects is a key feature of our senses. It is debated whether widely different sensory systems, such as vision and olfaction, may reach conclusions about such objects via similar or different mechanisms. According to the ”primitive olfactory brain” hypothesis proposed by C.J. Herrick in 1933, the human olfactory system cannot reliably identify odor stimuli based on scent alone, and instead relies on cues from higher sensory modalities like vision and audition. Here, we tested whether odor identification is in fact more dependent on source-based predictive cues (e.g. “lilac”), compared to identifying a visual object. Participants listened to word cues (object-based, e.g. “lilac”, and category-based, e.g. “flower”), and then quickly determining whether a visual or olfactory target stimulus matched (50% of trials ) or did not match (50% of trials) the word cue. As predicted, we found that the greatest disparity in response time differences between matching and non-matching trials occurred when the word cue was object-based and the target was olfactory. This interaction effect disappeared when participants were cued with category-based words. Our results suggests that olfactory identification not only benefits from predictive non-olfactory sensory cues, but that it may be uniquely enhanced when the non-olfactory sensory information is object-based. These results provide important insight into the organisation of the sensory hierarchy in the brain.
+
+```{r clear global environment}
+# This function removes the entire global environment!!!
+rm(list = ls())
+#------------------------------------------------------------------------------------------------100
+```
+
+```{r load libraries, message=FALSE, warning=FALSE}
+# Load all important packages.
+library(tidyr)
+library(plyr)
+library(ggplot2)
+library(ggpubr)
+library(Rmisc)
+library(dplyr)
+library(kableExtra)
+library(effects)
+library("afex")
+library("emmeans")
+library("psych")
+library(ggridges)
+library(Superpower)
+library(knitr)
+library(corrplot)
+library(sjPlot)
+library(data.table)
+library(grid)
+library(parameters)
+library(simr)
+library(faux)
+library("kableExtra")
+library(Rmisc)
+library(here)
+```
+
+```{r set external functions}
+# Caterpillar plot function.
+source("../bin/caterpillar_plot_code.R")
+
+# Ratings graph function.
+source("../bin/ratings.R", local = knitr::knit_global())
+
+# Ratings ANOVA function.
+source("../bin/ratings_anova.R", local = knitr::knit_global())
+
+#Interaction function.
+source("../bin/interaction_data.R", local = knitr::knit_global())
+
+# Congruency function.
+source("../bin/effect_of_congruency.R", local = knitr::knit_global())
+
+# Adaptive bayesian computation function.
+source("../bin/abc.R", local = knitr::knit_global())
+
+# Accuracy by reaction time.
+source("../bin/accuracy_by_reaction_time.R", local = knitr::knit_global())
+
+# Accuracy by trial number
+source("../bin/accuracy_by_trial_number.R", local = knitr::knit_global())
+
+source("../bin/reaction_time_by_trial_number.R", local = knitr::knit_global())
+
+source("../bin/reaction_time_by_trial_number_congruency_split.R", local = knitr::knit_global())
+
+source("../bin/coloring.R", local = knitr::knit_global())
+
+```
+
+```{r make fake datatables}
+# Subset all Object-cue vectors into a single dataframe.
+faketable_o <- data.frame(
+  "row" = c(1, 2, 3, 4, "...", 64, 65, 66, 67, "...", 222, "...", 5000),
+  "subject" = c(rep(1, times = 4), "...", rep(1, times = 4), "...", 2, "...", 20),
+  "auditory_cue" = c("lavender", "lilac", "lemon", "pear",  "...", "lavender", "lilac",
+                     "lemon", "pear", "...", "lavender", "...", "pear"),
+  "target" = c("lavender", "pear", "lemon", "lilac", "...", "lavender", "pear",
+               "lemon", "lilac", "...", "lavender", "...", "lilac"),
+  "modality" = c(rep("visual", times = 4), "...", rep("olfactory", times = 4), "...",
+                 "visual", "...", "olfactory"),
+  "congruency" = c(rep(c("congruent", "incongruent"), times = 2), "...",
+                 rep(c("congruent", "incongruent"), times = 2),  "...",
+                 "congruent", "...", "incongruent"),
+  "reaction_time" = c(560, 740, 600, 550, "...", 1121, 1576, 1844, 1343, "...", 466, "...", 1399)
+  )
+
+# Subset all Category-cue vectors into a single dataframe.
+faketable_c <- data.frame(
+  row = c(1,2,3,4,"...",64,65,66,67,"...",222, "...", 5000),
+  subject = c(rep(1, times = 4), "...", rep(1, times = 4), "...", 2, "...", 20),
+  auditory_cue = c(rep(c("flower", "fruit"), each = 2), "...", rep(c("flower", "fruit"), each = 2),
+                   "...", "flower", "...", "fruit"),
+  target = c("lavender", "pear", "lemon", "lilac", "...", "lavender", "pear", "lemon", "lilac", 
+             "...", "lavender", "...", "lilac"),
+  modality = c(rep("Visual", time = 4), "...", rep("olfactory", times = 4), "...", "visual", "...",
+               "olfactory"),
+  congruency = c(rep(c("congruent", "incongruent"), times = 2), "...",
+                 rep(c("congruent", "incongruent"), times = 2), "...", "congruent", "...",
+                 "incongruent"),
+  reaction_time = c(530, 720, 598, 445,"...", 1123,1452,1857,2611, "...", 755, "...", 1003)
+  )
+```
+
+## Example Dataframes {.tabset}
+
+### Object-Cue Trials
+```{r display fake object-cue table}
+# Display the fake Object-cue dataframe.
+kable(faketable_o, caption="Object-Cue Data Table") %>%
+  # Set theme.
+  kable_classic() %>%
+  # Add footnote.
+  footnote(general = "This fake data table shows the structure of the object-cue trials")
+```
+
+### Category-Cue Trials
+```{r display fake category-cue table}
+# Display the fake Category-cue dataframe.
+kbl(faketable_c, caption="Category-Cue Data Table") %>%
+  # Set theme.
+  kable_classic()%>%
+  # Add footnote.
+  footnote(general = "This fake data table shows the structure of the category-cue trials")
+
+# Remove fake datatable information from Global Environment.
+rm(faketable_c, faketable_o)
+```
+
+# Data Preprocessing
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;All data were read in using each participant's raw, unedited data. There is a script below containing the entire pre-processing code which organizes the data for analysis. Click the "code" tab to see.
+```{r load data}
+# Make file list.
+list_of_files <- list.files(
+  path = "C:/Users/STPI0560/Desktop/Experiments/ObjectCategory_Behavioural/data/raw_data",
+  recursive = TRUE,
+  pattern = "\\.csv$",
+  full.names = TRUE
+  )
+
+# Read all the files and create a FileName column to store filenames
+main_df <- rbindlist(sapply(list_of_files, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName", fill = TRUE)
+```
+
+```{r create dataframes}
+## Subset data for each of the 4 block types:
+
+# Visual Target Object Cue
+visual_object_lm <- subset(
+  main_df, Modality == "VisualStimulus" & KeyResponse_VisualPractice.keys!= "n"
+  )
+
+# Visual Target Category Cue
+visual_category_lm <- subset(main_df, Modality == "VisualCategory")
+
+# Olfactory Target Object Cue
+olfactory_object_lm <- subset(
+  main_df, Modality == "OlfactoryStimulus" & KeyResponse_OlfactoryPractice.keys != "n"
+  )
+
+# Olfactory Object Category Cue
+olfactory_category_lm <- subset(main_df, Modality == "OlfactoryCategory")
+
+
+## Subset above dataframes further to only include relevant variables.
+
+# Visual Target Object Cue
+visual_object_lm <- data.frame(
+  participant = visual_object_lm$participant,
+  block = visual_object_lm$Modality,
+  cue = visual_object_lm$Cue,
+  target = visual_object_lm$Target,
+  match = visual_object_lm$Match,
+  accuracy = visual_object_lm$KeyResponse_VisualObject.corr,
+  reaction_time = visual_object_lm$KeyResponse_VisualObject.rt * 1000,
+  modality = "visual",
+  cue_type = "object"
+  ) %>% 
+  # Change "yes/no" to "Congruent/Incongruent".
+  mutate(congruency = ifelse(visual_object_lm$Match == "yes", "congruent", "incongruent"))
+
+# Random Effects Model
+visual_object_me <- visual_object_lm %>% 
+  # Create column for random effect by item.
+  mutate(item = paste(visual_object_lm$cue, visual_object_lm$target))
+
+# Visual Target Category Cue
+visual_category_lm <- data.frame(
+  participant = visual_category_lm$participant,
+  block = visual_category_lm$Modality,
+  cue = visual_category_lm$Cue,
+  target = visual_category_lm$Target,
+  match = visual_category_lm$Match,
+  accuracy = visual_category_lm$KeyResponse_VisualCategory.corr,
+  reaction_time = visual_category_lm$KeyResponse_VisualCategory.rt * 1000,
+  modality = "visual",
+  cue_type = "category"
+  ) %>%
+  # Change "yes/no" to "Congruent/Incongruent".
+  mutate(congruency = ifelse(visual_category_lm$Match == "yes", "congruent", "incongruent"))
+
+# Random Effects Model
+visual_category_me <- visual_category_lm %>%
+  # Create column for random effect by item.
+  mutate(item = paste(visual_category_lm$Cue, visual_category_lm$target))
+
+# Olfactory Target Object Cue
+olfactory_object_lm <- data.frame(
+  participant = olfactory_object_lm$participant,
+  block = olfactory_object_lm$Modality,
+  cue = olfactory_object_lm$Cue,
+  target = olfactory_object_lm$Target,
+  match = olfactory_object_lm$Match,
+  accuracy = olfactory_object_lm$KeyResponse_OlfactoryObject.corr,
+  reaction_time = olfactory_object_lm$KeyResponse_OlfactoryObject.rt * 1000,
+  modality = "olfactory",
+  cue_type = "object"
+  ) %>%
+  # Change "yes/no" to "Congruent/Incongruent".
+  mutate(congruency = ifelse(olfactory_object_lm$Match == "yes", "congruent", "incongruent"))
+
+# Random Effects Model
+olfactory_object_me <- olfactory_object_lm %>%
+  # Create column for random effect by item.
+  mutate(item = paste(olfactory_object_lm$cue, olfactory_object_lm$target))
+
+# Olfactory Object Category Cue
+olfactory_category_lm <- data.frame(
+  participant = olfactory_category_lm$participant,
+  block = olfactory_category_lm$Modality,
+  cue = olfactory_category_lm$Cue,
+  target = olfactory_category_lm$Target,
+  match = olfactory_category_lm$Match,
+  accuracy = olfactory_category_lm$KeyResponse_OlfactoryCategory.corr,
+  reaction_time = olfactory_category_lm$KeyResponse_OlfactoryCategory.rt * 1000,
+  modality = "olfactory",
+  cue_type = "category"
+  ) %>%
+  # Change "yes/no" to "Congruent/Incongruent".
+  mutate(congruency = ifelse(olfactory_category_lm$Match =="yes", "congruent", "incongruent"))
+
+# Random Effects Model
+olfactory_category_me <- olfactory_category_lm %>%
+  # Create column for random effect by item.
+  mutate(item = paste(olfactory_category_lm$cue, olfactory_category_lm$target))
+```
+
+# Participant Accuracy
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Here is a table displaying participant accuracy for each condition, as well as combined accuracy for both visual and both olfactory conditions. Rows marked in red indicate some potential accuracy issues for that participant in at least one condition.
+```{r accuracy dataframe}
+# The code below creates 4 dataframes containing participant accuracy for each of the 4 conditions:
+
+# bind the 4 afformentioned dataframes, and also add two new columns for overall visual and olfactory accuracy.
+accuracy <- bind_cols(
+  visual_object_lm %>%
+    group_by(participant = participant) %>%
+    summarise_at(vars("visual-object" = accuracy), funs(mean(., na.rm = TRUE))),
+  visual_category_lm %>%
+    group_by(participant_1 = participant) %>%
+    summarise_at(vars("visual-category" = accuracy), funs(mean(., na.rm = TRUE))),
+  olfactory_object_lm %>%
+    group_by(participant_2 = participant) %>%
+    summarise_at(vars("olfactory-object" = accuracy), funs(mean(., na.rm = TRUE))),
+  olfactory_category_lm %>%
+    group_by(participant_3 = participant) %>%
+    summarise_at(vars("olfactory-category" = accuracy), funs(mean(., na.rm = TRUE)))
+  ) %>%
+  mutate(visual = (`visual-object` + `visual-category`)/2, 
+         olfactory = (`olfactory-object` + `olfactory-category`)/2) %>%
+  select("participant", "visual-object", "visual-category", "olfactory-object",
+         "olfactory-category", "visual", "olfactory")
+
+# Create nice graphical table for the accuracy dataframe. This will output the table as well.
+kbl(accuracy, digits = 3) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>% 
+  row_spec(7, bold = T, color = "white", background = "#D7261E") %>%
+  row_spec(14, bold = T, color = "white", background = "#D7261E") %>%
+  row_spec(45, bold = T, color = "white", background = "#D7261E") %>%
+  scroll_box(height = "500px")
+```
+
+```{r full accuracy dataframe}
+# Create dataframe containing all accuracy data.
+full_accuracy <- rbind(
+  visual_object_lm, visual_category_lm, olfactory_object_lm, olfactory_category_lm
+  )
+```
+
+```{r accuracy graph dataframe}
+# Make dataframe for accuracy graphs.
+accuracy_graphs <- data.frame(
+  "vco" = filter(
+    full_accuracy, modality == "visual" & congruency == "congruent" & cue_type == "object"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "vio" = filter(
+    full_accuracy, modality == "visual" & congruency == "incongruent" & cue_type == "object"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "vcc" = filter(
+    full_accuracy, modality == "visual" & congruency == "congruent" & cue_type == "category"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "vic" = filter(
+    full_accuracy, modality == "visual" & congruency == "incongruent" & cue_type == "category"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "oco" = filter(
+    full_accuracy, modality == "olfactory" & congruency == "congruent" & cue_type == "object"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "oio" = filter(
+    full_accuracy, modality == "olfactory" & congruency == "incongruent" & cue_type == "object"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "occ" = filter(
+    full_accuracy, modality == "olfactory" & congruency == "congruent" & cue_type == "category"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE))),
+  "oic" = filter(
+    full_accuracy, modality == "olfactory" & congruency == "incongruent" & cue_type == "category"
+    ) %>%
+    group_by(participant) %>%
+    summarise_at(vars(accuracy), funs(mean(., na.rm = TRUE)))
+  ) %>%
+  # De-select specific columns.
+  select(-c(oic.participant, vio.participant, vcc.participant, vic.participant, oco.participant,
+            oio.participant, occ.participant, oic.participant)) %>%
+  # Rename specific columns.
+  rename("participant" = vco.participant,
+         "visual congruent object" =  vco.accuracy,
+         "visual incongruent object" = vio.accuracy,
+         "visual congruent category" = vcc.accuracy,
+         "visual incongruent category" =  vic.accuracy,
+         "olfactory congruent object" =  oco.accuracy,
+         "olfactory incongruent object" =  oio.accuracy,
+         "olfactory congruent category" =  occ.accuracy,
+         "olfactory incongruent category" =  oic.accuracy) %>%
+  # Reformat from wide to long.
+  gather(
+    type, accuracy, "visual congruent object":"olfactory incongruent category", factor_key = TRUE
+    ) %>%
+  # Change "Type" column to character.
+  mutate(type = as.character(type)) %>%
+  # Any cell starting with Visual of Olfactory takes only those values.
+  mutate(modality = case_when(
+    startsWith(type, "visual") ~ "visual", startsWith(type, "olfactory") ~ "olfactory")
+    )
+```
+
+### Participant Accuracy Graphs {.tabset}
+
+#### Histogram
+```{r accuracy graph 1, fig.width=12, fig.height=6, dpi=400}
+# Save file.
+png(path.expand("../results/participant_accuracy.png"),
+    units = "in", width = 12, height = 6, res = 300)
+
+# Create graph.
+participant_accuracy <- ggplot(accuracy_graphs, aes(x = accuracy, fill = modality)) +
+  geom_bar(position = "identity") + facet_wrap(~type, nrow = 2) +
+  theme_classic() +
+  ggtitle("Accuracy Binned By Participant") + 
+  scale_fill_brewer(palette = "BuPu") +
+  scale_color_brewer(palette = "BuPu") +
+  theme(plot.title = element_text(size = 20, face = "bold", hjust = .5))
+
+# Display graph on .png file.
+participant_accuracy
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+participant_accuracy
+```
+*Histogram of the distribution of participant accuracy for olfactory and visual targets.*
+
+#### Total
+```{r accuracy graph 2, fig.width=15, fig.height = 8}
+
+# Save file.
+png(path.expand("../results/total_accuracy.png"), units = "in", width = 15, height = 8, res = 300)
+
+# Ratings dataframe that allows error bars.
+total_accuracy <- ddply(accuracy_graphs, c("type"), summarise,
+               n    = length(accuracy),
+               mean = mean(accuracy),
+               sd   = sd(accuracy),
+               se   = sd / sqrt(n)) %>%
+  mutate(modality = c(
+    "olfactory", "olfactory", "olfactory", "olfactory",
+    "visual", "visual", "visual", "visual")
+    ) %>%
+  ggplot(aes(x = type, y = mean, fill = modality)) +
+  geom_dotplot(binaxis = 'y', stackdir = 'center', position = position_dodge(0.8)) +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), size = 1, width = .2,
+                position = position_dodge(.9)) + 
+  scale_fill_brewer(palette = "Dark2") +
+  theme(axis.text.x = element_text(face = "bold", size = 13, angle = 55, hjust = 1),
+        plot.title = element_text(size = 20, face = "bold", hjust = .5)) +
+  ggtitle("\n\n\n\nTotal Accuracy By Block Type And Modality")
+
+# Display graph on .png file.
+total_accuracy
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+total_accuracy
+```
+*Overall accuracy among all participants for each block type of the visual and olfactory trials.*
+
+# Demographics Information {.tabset}
+
+## Demographics
+```{r demographics summary}
+###########################################
+#                                         #
+# Note: Female = 1, Male = 2              #
+# Note: Right-Handed = 2, Left-Handed = 1 #
+#                                         #
+###########################################
+
+# Read Demographics .csv file
+demographics <- read.csv("../data/dataCleaned.csv", header = TRUE, sep = ",")
+
+# Create Demographics Dataframe
+demographics <- data.frame(
+  "participant" = demographics$participantID.1,
+  "age" = demographics$age.1,
+  "gender" = ifelse(demographics$Gender.1 == 1, "female", "male"),
+  "handedness" = ifelse(demographics$handed.1 == 2, "right", "left"),
+  "taking_medicine?" = demographics$taking.medicine.,
+  "olfactory_problems?" = demographics$problem.w.sense.of.smell.,
+  "psyc_problems?" = demographics$atypical.psychological.or.neurological.condition,
+  "vision_issues?" = demographics$Problem.w.vision.â...not.corrected.w.glasses.lenses,
+  "notes" = demographics$Notes.on.participant
+  )
+
+# Display nice demographics table with full information for each participant
+kbl(demographics, caption="participant demographics", digits = 3) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>% 
+  scroll_box(height = "500px")
+```
+
+## Gender
+```{r gender demographics}
+# Display gender demographics.
+data.frame("gender" = table(demographics$gender)) %>%
+  # Rename columns.
+  rename(gender = gender.Var1, frequency = gender.Freq) %>%
+  # Add caption to table.
+  kbl(caption="gender demographics", digits = 3) %>%
+  # Set style.
+  kable_styling(bootstrap_options = c("striped", "hover")) 
+```
+
+## Handedness
+```{r handedness demographics}
+# Display handedness demographics.
+data.frame("handedness" = table(demographics$handedness)) %>%
+  # Rename columns.
+  rename(handedness = handedness.Var1, frequency = handedness.Freq) %>%
+  # Add caption to table.
+  kbl(caption="handedness demographics", digits = 3) %>%
+  # Set style.
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+## Age
+```{r age graph}
+# Save file.
+png(path.expand("../results/AgePlot.png"), units = "in", width = 7, height = 4, res = 300)
+
+# Create age graph.
+age_plot <- ggplot(data = demographics, aes(age, fill = age)) +
+  geom_histogram(fill = "Blue", alpha = 0.3) +
+  theme_classic() +
+  ggtitle("Age (Range = 18-65)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Display graph on .png file.
+age_plot
+
+# Exit graph. 
+dev.off()
+
+# Plot graph.
+age_plot
+```
+
+# Ratings Data
+
+## Graphs {.tabset}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Participants rated visual and olfactory stimuli (lavender, lilac, lemon, pear) along 4 dimensions (intensity, quality, fruitiness, floweriness) prior to completing the main experiment. Each graph shows the distribution of participant ratings for visual and olfactory targets along 4 dimensions.
+```{r ratings dataframes}
+# Create a dataframe for participant visual ratings.
+ratings_data_visual <- subset(main_df, Modality1 == "Visual") %>%
+  select("participant" = participant,
+         "modality" = Modality1,
+         "cue" = WordCue1,
+         "intensity_rating" = IntensitySlider_VisualRating.response,
+         "quality_rating" = QualitySlider_VisualRating.response,
+         "fruit_rating" = FruitSlider_VisualRating.response,
+         "flower_rating" = FlowerSlider_VisualRating.response)
+
+# Create a dataframe for participant olfactory ratings.
+ratings_data_olfactory <- subset(main_df, Modality2 == "Olfactory") %>%
+  select("participant" = participant,
+         "modality" = Modality2,
+         "cue" = WordCue2,
+         "intensity_rating" = IntensitySlider_VisualRating.response,
+         "quality_rating" = QualitySlider_VisualRating.response,
+         "fruit_rating" = FruitSlider_VisualRating.response,
+         "flower_rating" = FlowerSlider_VisualRating.response)
+
+# Bind visual and olfactory dataframes into a single dataframe.
+ratings_data <- rbind(ratings_data_visual, ratings_data_olfactory) %>%
+  gather(rating_type, rating, intensity_rating:flower_rating, factor_key = TRUE)
+```
+
+### Intensity
+```{r intensity ratings graph, fig.width = 10, fig.height = 6}
+# Save file.
+png(path.expand("../results/intensity_rating"), units = "in", width = 7, height = 4, res = 300)
+
+# Display graph on .png file.
+ratings("intensity_rating")
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+ratings("intensity_rating")
+```
+
+### Quality
+```{r quality ratings graph, fig.width = 10, fig.height = 6}
+# Save file.
+png(path.expand("../results/quality_rating.png"), units = "in", width = 7, height = 4, res = 300)
+
+# Display graph on .png file.
+ratings("quality_rating")
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+ratings("quality_rating")
+```
+
+### Floweriness
+```{r floweriness ratings graph, fig.width = 10, fig.height = 6}
+# Save file.
+png(path.expand("../results/flower_rating.png"), units = "in", width = 7, height = 4, res = 300)
+
+# Display graph on .png file.
+ratings("flower_rating")
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+ratings("flower_rating")
+```
+
+### Fruitiness
+```{r fruitiness ratings graph, fig.width = 10, fig.height = 6}
+# Save file.
+png(path.expand("../results/fruit_rating.png"), units = "in", width = 7, height = 4, res = 300)
+
+# Display graph on .png file.
+ratings("fruit_rating")
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+ratings("fruit_rating")
+```
+
+## Statistical Summaries {.tabset}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;One-way ANOVA's were conducted for each dimension and each target sense. Follow-up analyses were conducted when necessary.
+
+### Olfaction {.tabset}
+
+#### Intensity
+```{r olfactory intensity summary}
+# Olfactory intensity ANOVA.
+rating_anova("Olfactory", "intensity_rating")
+
+# Olfactory intensity descriptives.
+rating_descriptives("Olfactory", "intensity_rating")
+
+# Olfactory intensity pairwise comparisons.
+rating_posthoc("Olfactory", "intensity_rating")
+```
+
+#### Quality
+```{r olfactory quality summary}
+# Olfactory quality ANOVA.
+rating_anova("Olfactory", "quality_rating")
+
+# Olfactory quality descriptives.
+rating_descriptives("Olfactory", "quality_rating")
+
+# Olfactory quality pairwise comparisons.
+rating_posthoc("Olfactory", "quality_rating")
+```
+
+#### Floweriness
+```{r olfactory floweriness summary}
+# Olfactory floweriness ANOVA.
+rating_anova("Olfactory", "flower_rating")
+
+# Olfactory floweriness descriptives.
+rating_descriptives("Olfactory", "flower_rating")
+
+# Olfactory floweriness pairwise comparisons.
+rating_posthoc("Olfactory", "flower_rating")
+```
+
+#### Fruitiness
+```{r olfactory fruitiness summary}
+# Olfactory fruitiness ANOVA.
+rating_anova("Olfactory", "fruit_rating")
+
+# Olfactory fruitiness descriptives.
+rating_descriptives("Olfactory", "fruit_rating")
+
+# Olfactory fruitiness pairwise comparisons.
+rating_posthoc("Olfactory", "fruit_rating")
+```
+
+### Visual{.tabset}
+
+#### Intensity
+```{r visual intensity summary}
+# Visual intensity ANOVA.
+rating_anova("Visual", "intensity_rating")
+
+# Visual intensity descriptives.
+rating_descriptives("Visual", "intensity_rating")
+
+# Visual intensity pairwise comparisons.
+rating_posthoc("Visual", "intensity_rating")
+```
+
+#### Quality
+```{r visual quality summary}
+# Visual quality ANOVA.
+rating_anova("Visual", "quality_rating")
+
+# Visual quality descriptives.
+rating_descriptives("Visual", "quality_rating")
+
+# Visual quality pairwise comparisons.
+rating_posthoc("Visual", "quality_rating")
+```
+
+#### Fruitiness
+```{r visual fruitiness summary}
+# Visual fruitiness ANOVA.
+rating_anova("Visual", "fruit_rating")
+
+# Visual quality descriptives.
+rating_descriptives("Visual", "fruit_rating")
+
+# Visual quality pairwise comparisons.
+rating_posthoc("Visual", "fruit_rating")
+```
+
+#### Floweriness
+```{r visual floweriness summary}
+# Visual floweriness ANOVA.
+rating_anova("Visual", "flower_rating")
+
+# Visual floweriness descriptives.
+rating_descriptives("Visual", "flower_rating")
+
+# Visual floweriness pairwise comparisons.
+rating_posthoc("Visual", "flower_rating")
+```
+
+# ANOVA
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;An *ANOVA* was conducted seperately for object-cues and category-cues. This will give us two 2x2 ANOVA models. The factors of each ANOVA are modality (visual, olfactory) and congruency (congruent, incongruent). Therefore, the main effect of Modality, main effect of Congruency, and Modality X Congruency interaction were tested.
+```{r ANOVA dataframes}
+# Merge the 4 seperate dataframes.
+full_dataframe <- bind_rows(visual_object_lm, olfactory_object_lm,
+                            visual_category_lm, olfactory_category_lm) %>%
+  # New column Item: each observation pastes cue and target.
+  mutate(item = factor(paste(cue, target))) %>%
+  # Remove rows where either Accurcy or ReactionTime = NA.
+  drop_na(accuracy, reaction_time)  %>%
+  # Remove incorrect trials
+  subset(accuracy != "0") %>%
+  # Remove ReactionTime's slower than 200ms.
+  filter(reaction_time > 200) %>%
+  # Remove poor performing participants.
+  filter(!participant %in% c("107", "109", "114", "125", "145")) %>%
+  # Summarise data by ReactionTime.
+  ddply(c("participant", "cue_type", "modality", "congruency"),
+        summarise, reaction_time = mean(reaction_time)) %>%
+  # Make non-factor rows factors.
+  mutate(participant = as.factor(participant), congruency = as.factor(congruency))
+
+# Merge the 4 seperate dataframes.
+full_dataframe_acc <- bind_rows(visual_object_lm, olfactory_object_lm,
+                            visual_category_lm, olfactory_category_lm) %>%
+  # New column Item: each observation pastes cue and target.
+  mutate(item = factor(paste(cue, target))) %>%
+  # Remove rows where either Accurcy or ReactionTime = NA.
+  drop_na(reaction_time)  %>%
+  # Remove ReactionTime's slower than 200ms.
+  filter(reaction_time > 200) %>%
+  # Remove poor performing participants.
+  filter(!participant %in% c("107", "109", "114", "125", "145")) %>%
+  # Summarise data by ReactionTime.
+  ddply(c("participant", "cue_type", "modality", "congruency"),
+        summarise, accuracy = mean(accuracy)) %>%
+  # Make non-factor rows factors.
+  mutate(participant = as.factor(participant), Congruency = as.factor(congruency))
+```
+
+## Results{.tabset}
+
+### Object-Cue
+```{r object-cue ANOVA}
+# Object-cue ANOVA.
+within_aov_1 <- aov_car(
+  reaction_time ~ modality * congruency + Error(participant/modality * congruency),
+  data = full_dataframe[full_dataframe$cue_type == "object", ]
+  )
+
+# Display output for the object-cue ANOVA.
+kbl(nice(within_aov_1), caption = "object-cue anova table", digits = 3) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+*We found a statistically significant main effect of modality  such that visual targets were processed faster than olfactory targets.We also found a significant behavioural speed advantage for congruent vs incongruent targets.Importantly, we observed a statistically significant interaction during the object-cue condition  between modality and congruency with the largest observed difference between congruent and incongruent reaction times occurring for olfactory targets. This supports our notion that processing of olfactory objects benefits more than visual objects from predictive cues.*
+
+### Category-Cue
+```{r category-cue ANOVA}
+# Category-cue ANOVA.
+within_aov_2 <- aov_car(
+  reaction_time ~ modality * congruency + Error(participant/modality * congruency),
+  data = full_dataframe[full_dataframe$cue_type == "category", ]
+  )
+
+# Display output for the category-cue ANOVA.
+kbl(nice(within_aov_2), caption = "category-cue anova table", digits = 3) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+*While the main effects for the category-cue trials were (unsurprisingly) similar to those of the object-cue trials, we did not observe a significant interaction between modality and congruency.*
+
+# ANOVA Graphs{.tabset}
+
+## Modality
+```{r message = FALSE, fig.height = 5, fig.width = 6, echo = FALSE}
+# Save file.
+png(path.expand("../results/modality_plot.png"), units = "in", width = 7, height = 6, res = 300)
+
+# Colored graph for main effect of modality for every participant.
+modality_plot <- ddply(full_dataframe, c("participant", "modality", "cue_type"),
+                      summarise, reaction_time = mean(reaction_time)) %>%
+  ggplot(aes(y = reaction_time, shape = modality)) +
+  geom_violin(aes(x = modality, group = modality, color = modality, fill = modality),
+              trim = TRUE) +
+  geom_line(aes(group = participant, x = modality), alpha = 0.2, linetype = "dotted") +
+  theme_classic() +
+  scale_fill_brewer(palette = "BuPu") +
+  scale_color_brewer(palette = "BuPu") +
+  geom_smooth(aes(x = modality),
+              method = "lm", se = FALSE, size = 2, color = "black") +
+  facet_wrap(~cue_type) + 
+  stat_summary(aes(x = modality, group = 1),
+               fun = "mean", colour = "black", size = 3, geom = "point") +
+  stat_summary(aes(x = modality, group = 1),
+               fun = "mean", colour = "black", size = 1, geom = "line",
+               linetype = "dashed") +
+  scale_shape(guide = FALSE) +
+  ggtitle("Modality") + 
+  xlab("") +
+  ylab("Reaction Time (ms)") +
+  ylim(0, 3200) +
+  geom_segment(aes(x = 1, y = 3100, xend = 2, yend = 3100)) +
+  geom_text(x = 1.5, y = 3150, label = "***") +
+  theme(panel.spacing = unit(2, "lines"),
+        axis.text.y = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")
+  
+# Display graph on .png file.
+modality_plot
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+modality_plot
+```
+*Effect of modality on object-cue and category-cue response times.*
+
+## Congruency
+```{r message = FALSE, fig.height = 5, fig.width = 6, echo = FALSE}
+# Save file.
+png(path.expand("../results/congruency_plot.png"), units = "in", width = 7, height = 6, res = 300)
+
+# Color graph for main effect of congruency for every participant.
+congruency_plot <- ddply(full_dataframe, c("participant", "congruency", "cue_type"), summarise, reaction_time = mean(reaction_time)) %>%
+  ggplot(aes(y = reaction_time, shape = congruency)) +
+  geom_violin(aes(x = congruency, group = congruency, color = congruency, fill = congruency)) +
+  scale_fill_brewer(palette = "BuPu") +
+  scale_color_brewer(palette = "BuPu") +
+  geom_line(aes(group = participant, x = congruency),
+            alpha = 0.2, linetype = "dotted") +
+  theme_classic() +
+  geom_smooth(aes(x = congruency),
+              method = "lm", se = FALSE, size = 2, color = "black") +
+  facet_wrap(~ cue_type) +
+  stat_summary(aes(x = congruency, group = 1),
+               fun = "mean", colour = "black", size = 3, geom = "point") +
+  stat_summary(aes(x = congruency, group = 1),
+               fun = "mean", colour = "black", size = 1, geom = "line",
+               linetype = "dashed") +
+  scale_shape(guide = FALSE) +
+  ggtitle("Congruency") + 
+  xlab("") +
+  ylab("Reaction Time (ms)") +
+  ylim(500, 2200) +
+  geom_segment(aes(x = 1, y = 2050, xend = 2, yend = 2050)) +
+  geom_text(x = 1.5, y = 2080, label = "***") +
+  theme(panel.spacing = unit(2, "lines"),
+        axis.text.y = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")
+  
+# Display graph on .png file.
+congruency_plot
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+congruency_plot
+```
+*Effect of congruency on object-cue and category-cue reaction times.*
+
+## Interaction
+```{r warning=FALSE, echo=FALSE}
+# Create dataframe for plotting InconguentMinusCongruent data.
+diff_graph <- summarySEwithin(interaction_data(full_dataframe),
+                measurevar = "incongruent_minus_congruent",
+                withinvars = c("modality_c", "cue_type_c"), 
+                idvar = "participant_c")
+
+diff_graph_2 <- summarySEwithin(interaction_data(full_dataframe),
+                measurevar = "incongruent_minus_congruent",
+                withinvars = c("participant_c", "modality_c", "cue_type_c"), 
+                idvar = "participant_c")
+
+diff_graph_2$block_c <- factor(diff_graph_2$cue_type_c, levels=c('object','category'))
+```
+
+```{r fig.height = 6, fig.width = 10, eval = FALSE}
+# Plot dot graph containing interaction values.
+png(path.expand("../results/interaction_bars.png"), width = 10, height = 6, units = 'in', res = 300)
+interaction_bar_graph <- ggplot(diff_graph,
+       aes(x = modality_c, y = incongruent_minus_congruent, fill = modality_c)) + 
+  theme_classic() +
+  geom_bar(stat = "identity", width = 0.5) +
+ facet_wrap(~ cue_type_c, ncol = 2) +
+ geom_errorbar(aes(ymin = incongruent_minus_congruent - se,
+                   ymax = incongruent_minus_congruent + se),
+               size = 1, width = .2, position = position_dodge(0.8)) +
+  ggtitle("Interaction Bar Graph (with corrected standard error)") +
+  xlab("Modality") + labs(fill = "Modality") + ylab("Incongruent - Congruent (ms)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Display graph on .png file.
+interaction_bar_graph
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+interaction_bar_graph
+```
+
+```{r message = FALSE, warning = FALSE, fig.height = 5, fig.width = 6, echo = FALSE}
+png(path.expand("../results/interaction_plot.png"), units = "in", width = 7, height = 6, res = 300)
+
+# Colored graph for main effect of modality for every participant.
+interaction_plot <- ggplot(diff_graph_2,
+                          aes(y = incongruent_minus_congruent, shape = modality_c)) +
+  geom_violin(aes(x = modality_c, group = modality_c, color = modality_c,
+                  fill = modality_c), trim = TRUE) +
+  geom_line(aes(group = participant_c, x = modality_c),
+            alpha = 0.2, linetype = "dotted") +
+  theme_classic() +
+  scale_fill_brewer(palette = "BuPu") +
+  scale_color_brewer(palette = "BuPu") +  
+  geom_smooth(aes(x = modality_c),
+              method = "lm", se = FALSE, size = 2, color = "black") +
+  facet_wrap(~cue_type_c) +
+  stat_summary(aes(x = modality_c, group = 1),
+               fun = "mean", colour = "black", size = 3, geom = "point") +
+  stat_summary(aes(x = modality_c, group = 1),
+               fun = "mean", colour = "black", size = 1, geom = "line",
+               linetype = "dashed") +
+  scale_shape(guide = FALSE) +
+  ggtitle("Interaction") +
+  xlab("") +
+  ylab("Incongruent - Congruent Reaction Time (ms)") +
+  ylim(-200, 500) +
+  geom_text(data = data.frame("x1" = c(1, 1),
+                              "x2" = c(2, 2), 
+                              "y1" = c(420, 420), 
+                              "xstar" = 1.5,
+                              "ystar" = 435,
+                              "lab" = "*",
+                              "modality_c" = c("olfactory", "cisual"),
+                              "block_c" = "object-cue"),
+            aes(x = xstar,  y = ystar, label = lab)) +
+  geom_segment(data = data.frame("x1" = c(1, 1),
+                                 "x2" = c(2, 2), 
+                                 "y1" = c(420, 420), 
+                                 "xstar" = 1.5,
+                                 "ystar" = 435,
+                                 "lab" = "*",
+                                 "modality_c" = c("olfactory", "visual"),
+                                 "block_c" = "object-cue"),
+               aes(x = x1, xend = x2,y = y1, yend = y1), colour = "black") +
+  theme(panel.spacing = unit(2, "lines"),
+        axis.text.y = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.position = "none")
+
+# Display graph on .png file.
+interaction_plot
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+interaction_plot
+```
+*Difference between incongruent and congruent reaction times (ms) for the object-cue and category-cue conditions as a function of target modality.*
+
+# Exploratory Analysis{.tabset}
+```{r exploratory analysis dataframe, echo = FALSE}
+# Create dataframe to plot main effect of modality between cutype.
+cdp_o <- ddply(full_dataframe[full_dataframe$modality == "olfactory", ],
+                       c("participant", "congruency", "cue_type"),
+                       summarise,
+                       reaction_time = mean(reaction_time))
+
+# Create dataframe to plot main effect of modality between cutype.
+cdp_v <- ddply(full_dataframe[full_dataframe$modality == "visual", ],
+                    c("participant", "congruency", "cue_type"),
+                    summarise,
+                    reaction_time = mean(reaction_time))
+
+cdp_o <- coloring(cdp_o)
+
+cdp_v <- coloring(cdp_v)
+
+# exploratory dataframes.
+vision_freq_object <- data.frame(table(cdp_v$coloring[cdp_v$cue_type == "object"]))
+vision_freq_category <- data.frame(table(cdp_v$coloring[cdp_v$cue_type == "category"]))
+olfaction_freq_object <- data.frame(table(cdp_o$coloring[cdp_o$cue_type == "object"]))
+olfaction_freq_category <- data.frame(table(cdp_o$coloring[cdp_o$cue_type == "category"]))
+
+cdp_v$annotation <- case_when(
+  cdp_v$cue_type == "object" ~
+    round(vision_freq_object$Freq[1]/sum(vision_freq_object$Freq) * 100),
+  cdp_v$cue_type == "category" ~
+  round(vision_freq_category$Freq[1]/sum(vision_freq_category$Freq) * 100)
+  )
+
+cdp_o$annotation <- case_when(
+  cdp_o$cue_type == "object" ~
+    round(olfaction_freq_object$Freq[1]/sum(olfaction_freq_object$Freq) * 100),
+  cdp_o$cue_type == "category" ~
+    round(olfaction_freq_category$Freq[1]/sum(olfaction_freq_category$Freq) * 100)
+  )
+```
+Our main results showed that olfactory processing, similar to vision, benefits from predictive cues, but this effect was exacerbated for olfactory object cues. In an exploratory analyses, we asked how many participants showed this pattern of priming? Unsurprisingly, congruent targets were processed faster than incongruent targets in almost all participants and conditions. 
+
+## Effect Of Congruency
+```{r congruency effect graph, message=FALSE, warning=FALSE, fig.height=4, fig.width=9, echo=FALSE}
+# Save file.
+png(path.expand("../results/effect_of_congruency.png"),
+    units = "in", width = 9, height = 4, res = 300)
+
+# Combine two graphs with function: effect_of_congruency().
+fig <- ggarrange(effect_of_congruency(cdp_v, "Visual Target", 250, 1200, 1.5, 1100),
+  effect_of_congruency(cdp_o, "Olfactory Target", 850, 3400, 1.5, 3100),
+  ncol = 2, nrow = 1)
+
+# Display graph on .png file.
+annotate_figure(fig, top = text_grob("Congruency Effect"))
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+annotate_figure(fig, top = text_grob("Congruency Effect"))
+```
+*Participant-level congruency effect. While fewer participants were affected by the olfactory cue-target congruency manipulation relative to the visual condition, this might be attributed to a higher task difficulty in olfactory tasks, as the effect is clearly present for both sensory modalities.*
+
+# Participant Removal Criteria Based on Accuracy Performance
+
+## Participant Removal Criteria
+We finished the experiment with 69 participants tested. We had two exclusion criteria based on either chance performance and olfactometer issues.
+
+* 3 participants were removed for issues related to the olfactometer:
+  * 109: Pear odor less potent. Teodor checked and confirmed it was fainter than the other odors.
+  * 125: The lemon odor was too weak and the participant said they were having trouble detecting it.
+  * 145: Lavender had lost all smell and participant had been tested with this odor absent.
+
+* 2 additional participant were removed fr low accuracy during odor blocks.
+
+To remove participants at chance performace, an Adaptive Bayesian Computation approach was taken. In short, a posterior parameter distribution was computed using a binomial procedure. Each participant was tested seperately and removed if their 95% credibility interval included 50%. Each participant completed 48 trials per block type, and the smallest disparity between correct and incorrect cue-target matches that include 50% in the 95% credibility interval is 31/48 = ~ 65%. Any participant below 31 out of 48 trials correct on a particicular block was totally removed from the study (although their rating data was still used).
+Additional logic for using this procedure: If I were to flip a coin 48 times, and 24 out of 48 flips (50% ) came up heads, the posterior probability estimate of the most probable weightings of heads versus tails would be entered exactly at 50% (since a result like this indicates the coin is perfectly fair). If instead I got slightly more heads than tails (26 out of 48 = 54%) the posterior estimate would be have its mode greater than 50%, but the 95% most probable weightings of the coin still include 50% so we couldn't conclude at 95% probability that the coin is biased towards heads. Once you get to 31 out of 48% heads (65%), the 95% most probable weightings of the coin no longer contain 50% (which represents a fair coin), so all of the most probable weightings that generated the observed data represent an unfair coin biased towards heads. For the accuracy data, if 50% (guessing) is included in the 95% most probable values generating the data, w can't rule out that the data were generated by someone who is guessing. If the 95% most probable values do not include 50%, thn based on the observed data, we can conclude that the data were not generated by a person who is guessing. Examples of posterior distributions on the next page.
+
+### Adaptive Bayesian Computation Examples {.tabset}
+
+#### Ex. 1 
+```{r abc guessing, warning=FALSE, fig.height=3.5, fig.width=10, echo=FALSE}
+post1 <- draws(24)
+abc_graph(post1, "Participant is guessing")
+```
+*Hypothetical posterior distribution where a participants is guessing.*
+
+#### Ex. 2
+```{r abc guessing threshold, warning=FALSE, fig.height=3.5, fig.width=10, echo=FALSE}
+# Graph ABC guessing threshold graph.
+post1 <- draws(31)
+abc_graph(post1, "Guessing Threshold")
+```
+*The lowest acceptable response profile threshold for accuracy (31/48 correct responses): any participant with a lower accuracy score than that which produced this posterior distribution (i.e. response profile <= 30/48) was removed.*
+
+#### Ex. 3
+```{r abc not guessing, warning=FALSE, fig.height=3.5, fig.width=10, echo=FALSE}
+post1 <- draws(40)
+abc_graph(post1, "Participant Is Not Guessing")
+```
+*A more typical posterior distribution where participant accuracy is ~ 90%.*
+
+# Accuracy By Reaction Time Correlation{.tabset}
+```{r accuracy x rection_time dataframes, message=FALSE, warning=FALSE, echo=FALSE}
+
+object_corr_rt <- full_dataframe %>%
+  subset(cue_type == "object") %>% 
+  filter(reaction_time > 200) %>% 
+  summarySE(measurevar = "reaction_time",
+            groupvars = c("participant", "modality", "congruency"))
+
+object_corr_acc <- full_dataframe_acc %>%
+  subset(cue_type == "object") %>% 
+  summarySE(measurevar = "accuracy",
+            groupvars = c("participant", "modality", "congruency"),
+            na.rm = TRUE)
+
+category_corr_rt <- full_dataframe %>%
+  subset(cue_type == "category" ) %>% 
+  filter(reaction_time > 200) %>% 
+  summarySE(measurevar = "reaction_time",
+            groupvars=c("participant", "modality", "congruency"),
+            na.rm=TRUE)
+
+category_corr_acc <- full_dataframe_acc %>%
+  subset(cue_type == "category") %>% 
+  summarySE(measurevar = "accuracy",
+            groupvars = c("participant", "modality", "congruency"))
+
+# Bind object accuracy and object reaction time check dataframes. 
+object_corr <- bind_cols(object_corr_acc, object_corr_rt) %>%
+  rename("participant" = participant...1,
+         "modality" = modality...2,
+         "congruency" = congruency...3,
+         "accuracy" = accuracy,
+         "reaction_time" = reaction_time) %>%
+  select(-c(N...4, sd...6, se...7, ci...8, participant...9, modality...10, congruency...11, N...12,
+            sd...14 , se...15, ci...16))
+
+# Bind category accuracy and category reaction time check dataframes. 
+category_corr <- bind_cols(category_corr_acc, category_corr_rt) %>%
+  rename("participant" = participant...1,
+         "modality" = modality...2,
+         "congruency" = congruency...3,
+         "accuracy" = accuracy,
+         "reaction_time" = reaction_time) %>%
+  select(-c(N...4, sd...6, se...7, ci...8, participant...9, modality...10,
+            congruency...11, N...12, sd...14 , se...15, ci...16))
+
+# Bind subsetted congruent object and incongruent object accuracy subsetted dataframes.
+object_corr <- cbind(object_corr[object_corr$congruency == "congruent",],
+                     object_corr[object_corr$congruency == "incongruent",]) %>%
+  rename("participant_c" = 1, "modality_c" = 2, "congruency_c" = 3, "accuracy_c" = 4,
+                          "reaction_time_c" = 5, "participant_i" = 6, "modality_i" = 7,
+                          "congruency_i" = 8, "accuracy_i" = 9, "reaction_time_i" = 10) %>%
+  mutate("diff" = reaction_time_i - reaction_time_c,
+         "accuracy" = (accuracy_c + accuracy_i)/2) %>%
+  select(-c(participant_i, modality_i, congruency_i, accuracy_c, reaction_time_c, accuracy_i, reaction_time_i)) %>%
+  rename("participant" = participant_c, "modality" = modality_c, "congruency" = congruency_c)
+
+# Bind subsetted congruent object and incongruent category accuracy subsetted dataframes.
+category_corr <- cbind(category_corr[category_corr$congruency == "congruent",],
+                       category_corr[category_corr$congruency == "incongruent",]) %>%
+  rename("participant_c" = 1, "modality_c" = 2, "congruency_c" = 3, "accuracy_c" = 4,
+                          "reaction_time_c" = 5, "participant_i" = 6, "modality_i" = 7,
+                          "congruency_i" = 8, "accuracy_i" = 9, "reaction_time_i" = 10) %>%
+  mutate("diff" = reaction_time_i - reaction_time_c,
+         "accuracy" = (accuracy_c + accuracy_i)/2) %>%
+  select(-c(participant_i, modality_i, congruency_i, accuracy_c, reaction_time_c, accuracy_i,
+            reaction_time_i)) %>%
+  rename("participant" = participant_c, "modality" = modality_c, "congruency" = congruency_c)
+```
+
+## Regression Graphs
+```{r accuracy x reaction_time graph, message=FALSE, warning=FALSE, fig.height=5, fig.width=9, echo=FALSE}
+# Save file.
+png(path.expand("../results/accuracy_by_reaction_time.png"),
+ units = "in", width = 9, height = 5, res = 300)
+
+# Arrange the four graphs above on 1 graph.
+fig1 <- ggarrange(accuracy_by_reaction_time(
+    object_corr[object_corr$modality == "visual", ],
+    0.8, -130, 0.8, -185, "Visual Target + Object-Cue"
+    ), accuracy_by_reaction_time(
+    category_corr[category_corr$modality == "visual", ],
+    0.85, -130, 0.85, -185, "Visual Target + Category Cue"
+    ), accuracy_by_reaction_time(
+    object_corr[object_corr$modality == "olfactory", ],
+    0.6, -200, 0.6, -270, "Olfactory Target + Object Cue"
+    ), accuracy_by_reaction_time(
+    category_corr[category_corr$modality == "olfactory", ],
+    0.6, -130, 0.6, -220, "Olfactory Target + Category Cue"
+    ),ncol = 2, nrow = 2)
+
+# Display graph on .png file.
+annotate_figure(fig1, top = text_grob("Accuracy By Reaction Time Correlation"))
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+annotate_figure(fig1, top = text_grob("Accuracy By Reaction Time Correlation"))
+```
+*Evidence of a speed/accuracy trade-off? Difference in congruency reaction time as a function of average participant accuracy for all combinations of modality and cue type. Top right: While the correlation is statistically significant, there is very strong visual evidence that the negative slope is in fact driven by a single data point.*
+
+## Outlier Follow-up
+```{r message=FALSE, warning=FALSE, fig.height=5, fig.width=9, echo = FALSE}
+# Save file.
+png(path.expand("../results/outlier_plot.png"), units = "in", width = 9, height = 4, res = 300)
+
+# Graph 1.
+one <- ggplot(category_corr[category_corr$modality == "visual", ], aes(x = accuracy, y = diff)) + 
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_classic() +
+  stat_cor(label.x = 0.84, label.y = -25) +
+  stat_regline_equation(label.x = 0.84, label.y = -45) +
+  xlab("Average Accuracy") +
+  ylab("Congruency Reaction Time Difference (ms)") +
+  ggtitle("Outlier Included") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=8)) +
+  theme(axis.title.y = element_text(size = 7))
+
+# Graph 2.
+two <- ggplot(
+  category_corr[category_corr$modality == "visual", ][
+    category_corr[category_corr$modality == "visual", ]$accuracy > 0.85, ],
+  aes(x=accuracy, y=diff)) + 
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_classic() +
+  stat_cor(label.x = 0.87, label.y = -25) +
+  stat_regline_equation(label.x = 0.87, label.y = -45) +
+  xlab("Average Accuracy") +
+  ylab("Congruency Reaction Time Difference (ms)") +
+  ggtitle("Outlier Removed") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=8)) +
+  theme(axis.title.y = element_text(size = 7)) +
+  ylim(-80, 300) +
+  xlim(0.87, 1)
+
+# Arrange the two graphs above on 1 graph.
+fig1 <- ggarrange(one, two, ncol = 2, nrow = 1)
+
+# Display graph on .png file.
+annotate_figure(fig1, top = text_grob("Visual Target + Category Cue"))
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+annotate_figure(fig1, top = text_grob("Visual Target + Category Cue"))
+```
+*Speed/accuracy trade-off is driven by a single data point. Removal of a single participant eliminated the significant result.*
+
+# Accuracy By Trial Number Correlation{.tabset}
+
+## Regression Graphs
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Visual object.
+test <- list()
+for (i in levels(factor(visual_object_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(visual_object_lm[visual_object_lm$participant == i, ])))
+  }
+visual_object_learning_acc <- visual_object_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number"), summarise, accuracy = mean(accuracy, na.rm = TRUE))
+
+# Visual category.
+test <- list()
+for (i in levels(factor(visual_category_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(visual_category_lm[visual_category_lm$participant == i, ])))
+  }
+visual_category_learning_acc <- visual_category_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number"), summarise, accuracy = mean(accuracy, na.rm = TRUE))
+
+# Olfactory object.
+test <- list()
+for (i in levels(factor(olfactory_object_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(olfactory_object_lm[olfactory_object_lm$participant == i, ])))
+  }
+olfactory_object_learning_acc <- olfactory_object_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number"), summarise, accuracy = mean(accuracy, na.rm = TRUE))
+
+# Olfactory category.
+test <- list()
+for (i in levels(factor(olfactory_category_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(olfactory_category_lm[olfactory_category_lm$participant == i, ])))
+  }
+olfactory_category_learning_acc <- olfactory_category_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number"), summarise, accuracy = mean(accuracy, na.rm = TRUE))
+```
+
+
+```{r message=FALSE, warning=FALSE, fig.height=6, fig.width=8, echo = FALSE}
+# Save file.
+png(path.expand("../results/accuracy_by_trial_number_plot.png"),
+    units = "in", width = 9, height = 5, res = 300)
+
+# Arrange previous four graphs onto a single graph.
+fig2 <- ggarrange(accuracy_by_trial_number(
+  visual_object_learning_acc, 0, 0.91, 0, 0.90, "Visual Target + Object Cue", 0.89, 1
+  ), accuracy_by_trial_number(
+  visual_category_learning_acc, 0, 0.915, 0, 0.905, "Visual Target + Category Cue", 0.90, 1
+  ), accuracy_by_trial_number(
+  olfactory_object_learning_acc, 0, 0.813, 0, 0.79, "Olfactory Target + Object Cue", 0.78, 1
+  ), accuracy_by_trial_number(
+  olfactory_category_learning_acc, 0, 0.78, 0, 0.75, "Olfactory Target + Category Cue", 0.74, 1
+  ), ncol = 2, nrow = 2)
+
+# Display graph on .png file.
+annotate_figure(fig2, top = text_grob("Accuracy By Trial Number Correlation"))
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+annotate_figure(fig2, top = text_grob("Accuracy By Trial Number Correlation"))
+```
+*Participants did not become more accurate in any condition over time.*
+
+# Reaction Time by Trial Number Correlation{.tabset}
+
+## Regression Graphs
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+test <- list()
+for (i in levels(factor(visual_object_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(visual_object_lm[visual_object_lm$participant == i, ])))
+}
+visual_object_learning_rt <- visual_object_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number", "congruency"), summarise,
+        reaction_time = mean(reaction_time, na.rm = TRUE))
+visual_object_learning_ave_congruent <- ddply(
+  visual_object_learning_rt[visual_object_learning_rt$congruency == "congruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "congruent")
+visual_object_learning_ave_incongruent <- ddply(
+  visual_object_learning_rt[visual_object_learning_rt$congruency == "incongruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "incongruent")
+
+test <- list()
+for (i in levels(factor(visual_category_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(visual_category_lm[visual_category_lm$participant == i, ])))
+  }
+visual_category_learning_rt <- visual_category_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number", "congruency"), summarise,
+        reaction_time = mean(reaction_time, na.rm = TRUE))
+visual_category_learning_ave_congruent <- ddply(
+  visual_category_learning_rt[visual_category_learning_rt$congruency == "congruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "congruent")
+visual_category_learning_ave_incongruent <- ddply(
+  visual_category_learning_rt[visual_category_learning_rt$congruency == "incongruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "incongruent")
+
+test <- list()
+for (i in levels(factor(olfactory_object_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(olfactory_object_lm[olfactory_object_lm$participant == i, ])))
+  }
+olfactory_object_learning_rt <- olfactory_object_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number", "congruency"), summarise,
+        reaction_time = mean(reaction_time, na.rm = TRUE))
+olfactory_object_learning_ave_congruent <- ddply(
+  olfactory_object_learning_rt[olfactory_object_learning_rt$congruency == "congruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "congruent")
+olfactory_object_learning_ave_incongruent <- ddply(
+  olfactory_object_learning_rt[olfactory_object_learning_rt$congruency == "incongruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "incongruent")
+
+test <- list()
+for (i in levels(factor(olfactory_category_lm$participant))) {
+  test[[i]] <- rep(c(1:nrow(olfactory_category_lm[olfactory_category_lm$participant == i, ])))
+  }
+olfactory_category_learning_rt <- olfactory_category_lm %>%
+  mutate(trial_number = purrr::flatten_dbl(test)) %>%
+  ddply(c("trial_number", "congruency"), summarise,
+        reaction_time = mean(reaction_time, na.rm = TRUE))
+olfactory_category_learning_ave_congruent <- ddply(
+  olfactory_category_learning_rt[olfactory_category_learning_rt$congruency == "congruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "congruent")
+olfactory_category_learning_ave_incongruent <- ddply(
+  olfactory_category_learning_rt[olfactory_category_learning_rt$congruency == "incongruent",],
+  c("trial_number"), summarise,
+  reaction_time = mean(reaction_time, na.rm=TRUE)
+  ) %>%
+  mutate("congruency" = "incongruent")
+
+visual_object_congruency <- rbind(visual_object_learning_ave_congruent,
+                                  visual_object_learning_ave_incongruent)
+
+visual_category_congruency <- rbind(visual_category_learning_ave_congruent,
+                                    visual_category_learning_ave_incongruent)
+
+olfactory_object_congruency <- rbind(olfactory_object_learning_ave_congruent,
+                                     olfactory_object_learning_ave_incongruent)
+
+olfactory_category_congruency <- rbind(olfactory_category_learning_ave_congruent,
+                                       olfactory_category_learning_ave_incongruent)
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=6, fig.width=8, echo=FALSE}
+# Save file.
+png(path.expand("../results/reaction_time_by_trial_number.png"),
+    units = "in", width = 8, height = 6, res = 300)
+
+# Arrange previous four graphs onto a single graph.
+fig3 <- ggarrange(
+  reaction_time_by_trial_number(
+    visual_object_congruency, 470, 430, "Visual Target + Object Cue", 400, 750
+    ),
+  reaction_time_by_trial_number(
+    visual_category_congruency, 500, 470, "Visual Target + Category Cue", 450, 750
+    ), 
+  reaction_time_by_trial_number(
+    olfactory_object_congruency, 1550, 1500, "Olfactory Target + Object Cue", 1480, 1900
+    ), 
+  reaction_time_by_trial_number(
+    olfactory_category_congruency, 1650, 1590, "Olfactory Target + Category Cue", 1550,2100
+    ), ncol = 2, nrow = 2)
+
+# Display graph on .png file.
+annotate_figure(fig3, top = text_grob("Reaction Time By Trial Number Correlation"))
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+annotate_figure(fig3, top = text_grob("Reaction Time By Trial Number Correlation"))
+```
+*Participants responded faster as visual and olfactory target conditions progressed when cued by category-base cues.*
+
+## Congruency Split
+```{r message=FALSE, warning=FALSE, fig.height=6, fig.width=8, echo = FALSE}
+# Save file.
+png(path.expand("../results/reaction_time_by_trial_number_congruency_split.png"),
+    units = "in", width = 8, height = 6, res = 300)
+
+# Arrange previous four graphs onto a single graph.
+fig3 <- ggarrange(
+  reaction_time_by_trial_number_congruency_split(
+    visual_object_congruency,
+    430, 460, "Visual Object Reaction Time By Trial Number", 400, 750
+    ),
+  reaction_time_by_trial_number_congruency_split(
+    visual_category_congruency,
+    430, 460, "Visual Category Reaction Time By Trial Number", 400, 750
+    ),
+  reaction_time_by_trial_number_congruency_split(
+    olfactory_object_congruency,
+    1450, 1500, "Olfactory Object Reaction Time By Trial Number", 1400, 2000
+    ),
+  reaction_time_by_trial_number_congruency_split(
+    olfactory_category_congruency,
+    1520, 1570, "Olfactory Category Reaction Time By Trial Number", 1480, 2150
+    ),
+  ncol = 2, nrow = 2,  common.legend = TRUE
+  )
+
+# Display graph on .png file.
+annotate_figure(fig3, top = text_grob("Reaction Time By Trial Number Correlation"))
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+annotate_figure(fig3, top = text_grob("Reaction Time By Trial Number Correlation"))
+```
+*When separated by congruency, participants showed a statistically significant decrease in reaction time as a function of trial for both congruent and incongruent category-cue/ visual target trials, and for incongruent object-cue/visual target trials.*
+
+# Simulation-Based Power For ANOVA{.tabset}
+We attempted to simulate summary statistics for a dataset we might expect to see from an experiment like ours. We used a simple 2 x 2 within-subjects design for both object-cue and category-cue simulations. The design includes 69 participants, and reaction times we believe are reasonable to assume: A very large effect of modality, a moderate effect of congruency, and a small effect size for their interaction. We also set each parameter to be highly correlated as a fully within-subjects design will include only correlated measures. Of note, we the ANOVApower package does not allow for different standard deviations per group. Unfortunately, we expected far greater variability for olfactory versus visual reaction times. But this is simply a limitation we have to be up front about.
+
+## Design{.tabset}
+### 80% Power
+```{r message=FALSE, warning=FALSE , results="hide"}
+design_result_80_power <- ANOVA_design(design = "2w*2w",
+                                       n = 69, 
+                                       mu = c(400, 1200, 430, 1400), 
+                                       sd = 550, 
+                                       r = c(0.8, 0.8, 0.8,
+                                             0.8, 0.8,
+                                             0.8),
+                                       labelnames = c("congruency", "congruent", "incongruent",
+                                                      "modality", "visual", "olfactory"))
+
+design_result_80_power_main <- ANOVA_exact(design_result_80_power)
+```
+
+```{r message=FALSE, warning=FALSE}
+design_result_80_power_main$plot
+```
+*Design for assessing effect size our study would have an 80% probability of detecting*
+
+```{r message=FALSE, warning=FALSE}
+design_result_80_power_main$main_results
+```
+
+### Detect 0.1 Interaction
+```{r message=FALSE, warning=FALSE, results="hide"}
+design_result_13_power <- ANOVA_design(design = "2w*2w",
+                                       n = 69, 
+                                       mu = c(400, 1200, 430, 1280), 
+                                       sd = 550, 
+                                       r = c(0.8, 0.8, 0.8,
+                                             0.8, 0.8,
+                                             0.8),
+                                       labelnames = c("congruency", "congruent", "incongruent",
+                                                      "modality", "visual", "olfactory"))
+
+design_result_13_power_main <- ANOVA_exact(design_result_13_power)
+```
+
+```{r message=FALSE, warning=FALSE}
+design_result_13_power$plot
+```
+*Design for assessing how much power the study had to detect a 0.1 interaction*
+
+```{r message=FALSE, warning=FALSE}
+design_result_13_power$main_results
+```
+
+## Power Analysis Results{.tabset}
+```{r message=FALSE, warning=FALSE, echo=FALSE, results="hide"}
+power_result_vig_80 <- ANOVA_power(design_result_80_power, 
+                                   alpha = 0.05, 
+                                   nsims = 1000, 
+                                   seed = 1234)
+
+power_result_vig_13 <- ANOVA_power(design_result_13_power, 
+                                   alpha = 0.05, 
+                                   nsims = 1000, 
+                                   seed = 1234)
+```
+
+### 80% Power
+```{r message=FALSE, warning=FALSE, results="hide"}
+kbl(data.frame("parameter_80" = c("congruency", "modality", "congruency:modality"),
+                       "power_80" = c(96.9141, 100.0000, 80.7804),
+                       "partial_eta_squared_80" = c(0.1815, 0.9293, 0.1081),
+                       "cohen_f_80" = c(0.4710, 3.6244, 0.3481),
+                       "non_centrality_80" = c(15.0831, 893.2649, 8.2401)))
+```
+*Simulated Parameters for 80% Power to Detect Interaction*
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+# Save file.
+png(path.expand("../results/power_curve_80.png"), units = "in", width = 7, height = 6, res = 300)
+
+# Display graph on .png file.
+plot_power(design_result_80_power, min_n = 1, max_n = 350, desired_power = 80, plot = TRUE)
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+plot_power(design_result_80_power, min_n = 1, max_n = 350, desired_power = 80, plot = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, fig.width=4, fig.height=4}
+# Save file.
+png(path.expand("../results/power_simulation_80.png"),
+    units = "in", width = 4, height = 4, res = 300)
+
+# Display graph on .png file.
+power_result_vig_80$plot1
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+power_result_vig_80$plot1
+```
+
+### 0.1 Power
+```{r message=FALSE, warning=FALSE, results="hide"}
+kbl(data.frame("parameter_13" = c("congruency", "modality", "congruency:modality"),
+               "power_13" = c(44.8835, 100.0000, 13.2369),
+               "partial_eta_squared_13" = c(0.0483, 0.9195, 0.0104),
+               "cohen_f_13" = c(0.2252, 3.3787, 0.1024),
+               "non_centrality_13" = c(3.4500, 776.2500, 0.7128)))
+```
+*Simulated Parameters to detect 0.1 effect size for Interaction*
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+# Save file.
+png(path.expand("../results/power_curve_01.png"), units = "in", width = 7, height = 6, res = 300)
+
+# Display graph on .png file.
+plot_power(design_result_13_power, min_n = 1, max_n = 850, desired_power = 80, plot = TRUE)
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+plot_power(design_result_13_power, min_n = 1, max_n = 850, desired_power = 80, plot = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, fig.width=4, fig.height=4}
+# Save file.
+png(path.expand("../results/power_simulation_13.png"), units = "in", width = 4, height = 4, res = 300)
+
+# Display graph on .png file.
+power_result_vig_13$plot1
+
+# Exit graph.
+dev.off()
+
+# Plot graph.
+power_result_vig_13$plot1
+```
+
+```{r, echo = FALSE}
+knitr::knit_exit()
+```
+
+# Linear Mixed Model
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;After careful consideration, we fit a random effects model with random intercepts for participant RTs, and for cue-target combination RTs. Therefore, the model contains 64 random intercepts for participant RTs and 16 random intercepts for cue-target RTs.
+
+```{r preprocessing, message=FALSE, warning=FALSE}
+# read in data:
+Object_ME <- Object %>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+Category_ME <- Category%>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+
+# Change Participant variable to factor
+Object_ME$Participant <- factor(Object_ME$Participant)
+Category_ME$Participant <- factor(Category_ME$Participant)
+
+Object_ME_2 <- Object %>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+Category_ME_2 <- Category%>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+
+Object_ME_2 <- subset(Object_ME_2, select = c(Participant, ReactionTime, Modality,
+                                          Congruency, Target, Cue))
+Category_ME_2 <- subset(Category_ME_2, select = c(Participant, ReactionTime, Modality,
+                                              Congruency, Target, Cue))
+
+Object_ME_2$Participant <- factor(Object_ME_2$Participant)
+Category_ME_2$Participant <- factor(Category_ME_2$Participant)
+
+# Contrast coding of modality (-1 vs. 1)
+Object_ME_2$mod <- ifelse(Object_ME_2$Modality == "Visual", -1, 1)
+Category_ME_2$mod <- ifelse(Category_ME_2$Modality == "Visual", -1, 1)
+
+# Contrast coding of congruency (-1 vs. 1)
+Object_ME_2$cong <- ifelse(Object_ME_2$Congruency == "Congruent", -1, 1)
+Category_ME_2$cong <- ifelse(Category_ME_2$Congruency == "Congruent", -1, 1)
+
+#Object_ME_2$Cue <- c("Object")
+#Category_ME_2$Cue <- c("Category")
+
+```
+
+## Object-Cue Mixed Effect Model
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The random participant intercepts account for a ecent amount of random error, while the cue-target intercepts account for less. The fixed coefficient results match the ANOVA.
+
+```{r Object Model Evaluation, message=FALSE, warning=FALSE}
+
+# Null Models
+ObjectModel_Null_1  <- lmer(
+  ReactionTime ~ (1|Participant) + (1|Target) + (1|Cue), data= Object_ME_2
+  )
+ObjectModel_Null_2  <- lmer(
+  ReactionTime ~ (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue), data= Object_ME_2
+  )
+ObjectModel_Null_3  <- lmer(
+  ReactionTime ~ (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue), data= Object_ME_2
+  )
+ObjectModel_Null_4  <- lmer(
+  ReactionTime ~ (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue),
+  data= Object_ME_2
+  )
+ObjectModel_Mod_1  <- lmer(
+  ReactionTime ~ mod + (1|Participant) + (1|Target) + (1|Cue), data= Object_ME_2
+  )
+ObjectModel_Mod_2  <- lmer(ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue), data= Object_ME_2)
+ObjectModel_Mod_3  <- lmer(ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue), data= Object_ME_2)
+ObjectModel_Mod_4  <- lmer(ReactionTime ~ mod + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue), data= Object_ME_2)
+ObjectModel_Cong_1  <- lmer(ReactionTime ~ cong + (1|Participant) + (1|Target) + (1|Cue), data= Object_ME_2)
+ObjectModel_Cong_2  <- lmer(ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue), data= Object_ME_2)
+ObjectModel_Cong_3  <- lmer(ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue), data= Object_ME_2)
+ObjectModel_Cong_4  <- lmer(ReactionTime ~ cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue), data= Object_ME_2)
+ObjectModel_ModPlusCong_1  <- lmer(ReactionTime ~ mod + cong + (1|Participant) + (1|Target) + (1|Cue), data= Object_ME_2)
+ObjectModel_ModPlusCong_2  <- lmer(ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue), data= Object_ME_2)
+ObjectModel_ModPlusCong_3  <- lmer(ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue), data= Object_ME_2)
+ObjectModel_ModPlusCong_4  <- lmer(ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue), data= Object_ME_2)
+ObjectModel_Full_1  <- lmer(ReactionTime ~ mod*cong + (1|Participant) + (1|Target) + (1|Cue), data= Object_ME_2)
+ObjectModel_Full_2  <- lmer(ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue), data= Object_ME_2)
+ObjectModel_Full_3  <- lmer(ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue), data= Object_ME_2)
+ObjectModel_Full_4  <- lmer(ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue), data= Object_ME_2)
+
+
+Object_Model_Selection <- anova(ObjectModel_Null_1, ObjectModel_Null_2, ObjectModel_Null_3, ObjectModel_Null_4, ObjectModel_Mod_1, ObjectModel_Mod_2, ObjectModel_Mod_3, ObjectModel_Mod_4, ObjectModel_Cong_1, ObjectModel_Cong_2, ObjectModel_Cong_3, ObjectModel_Cong_4, ObjectModel_ModPlusCong_1, ObjectModel_ModPlusCong_2, ObjectModel_ModPlusCong_3, ObjectModel_ModPlusCong_4, ObjectModel_Full_1, ObjectModel_Full_2, ObjectModel_Full_3, ObjectModel_Full_4)
+
+Object_Model_Selection <- as.data.frame(setDT(Object_Model_Selection, keep.rownames = TRUE)[])
+
+Object_Model_Selection$Model_lmer <- c(
+  "ReactionTime ~ (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ mod + (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ cong + (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ mod + cong + (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ mod*cong + (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ (1 + mod|Participant) + (1 + mod|Target) + (1|Cue)",
+  "ReactionTime ~ (1 + cong|Participant) + (1 + cong|Target) + (1|Cue)",
+  "ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+  "ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+  "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+  "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+  "ReactionTime ~ (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+  "ReactionTime ~ mod + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+  "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) +
+  (1 + mod + cong|Cue)",
+  "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) +
+  (1 + mod + cong|Cue)",
+  "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) +
+  (1 + mod + cong|Cue)"
+  )
+
+keeps <- c("Model_lmer", "AIC", "Pr(>Chisq)")
+Object_Model_Selection = Object_Model_Selection[keeps]
+
+kbl(Object_Model_Selection, label = "Object-cue Random Effects Models") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+
+
+```{r Object Mixed Model, message=FALSE, warning=FALSE}
+
+# This is the full participant-item model. It includes two predictors, an interaction,
+# random participant effects for intercept and slopes, random item intercept and
+# slopes, and correlations between random effects.
+
+#ObjectModel_Full_RE1  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1|Participant) + (1 |Item), data= Object_ME)
+
+ObjectModel_Full_RE1  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1 + mod+cong|Participant) + (1 + mod+cong|Target) + (1 + mod+cong|Cue), data= Object_ME_2)
+```
+
+```{r Object Summary2, message=FALSE, warning=FALSE}
+summary(ObjectModel_Full_RE1)
+model_parameters(ObjectModel_Full_RE1)
+```
+
+```{r Fixed-Effects Summary, message=FALSE, warning=FALSE}
+kable(coef(summary(ObjectModel_Full_RE1)))
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=3, fig.width=9}
+
+Object_ME_Participant <- ddply(Object_ME, c("Participant", "Modality", "Congruency"), summarize, 
+           ReactionTime = mean(ReactionTime, na.rm = T))
+Object_ME_Participant$mod <- ifelse(Object_ME_Participant$Modality == "Visual", -1, 1)
+Object_ME_Participant$cong <- ifelse(Object_ME_Participant$Congruency == "Congruent", -1, 1)
+Object_ME_Participant$Cue <- c("Object")
+
+
+Object_ME_2$conlab <- factor(Object_ME_2$cong, labels = c("Congruent", "Incongruent"))
+Object_ME_2$modlab <- factor(Object_ME_2$mod, labels = c("Visual", "Olfactory"))
+Object_ME_2$pred <- predict(ObjectModel_Full_RE1,re.form=NA)  ## population level
+Object_ME_2$pred1 <- predict(ObjectModel_Full_RE1) ## individual level
+
+Ob <- Object_ME_2 %>%
+  group_by(Participant, mod, cong) %>%
+  summarize(mean_val = mean(ReactionTime))
+Ob$conlab <- factor(Ob$cong, labels = c("Congruent", "Incongruent"))
+Ob$modlab <- factor(Ob$mod, labels = c("Visual", "Olfactory"))
+
+F1 <- ggplot(Ob,aes(mod,mean_val)) +
+    geom_line(aes(group=Participant,x=as.numeric(mod), color = Participant)) +
+    facet_wrap(~conlab,nrow=1) +
+  scale_x_continuous(name="Modality", breaks=c(-1,1), labels = c("V","O")) + 
+  scale_y_continuous(limits = c(0, 3000), breaks = c(0, 500, 1000, 1500, 2000, 2500, 3000)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Object-Cue: Participant Reaction Times") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+F2 <- ggplot(Object_ME_2,aes(mod,pred1)) +
+    geom_line(aes(group=Participant, x = as.numeric(mod), color = Participant)) +
+    facet_wrap(~conlab,nrow=1) +
+    geom_line(aes(y=pred,x=as.numeric(mod)),colour="black") +
+  scale_x_continuous(name="Modality", breaks=c(-1,1), labels = c("V","O")) + 
+  scale_y_continuous(limits = c(0, 3000), breaks = c(0, 500, 1000, 1500, 2000, 2500, 3000)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Object-Cue: Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Object_RandomSlopes1.png", units="in", width=9, height=3, res=300)
+ggarrange(F1, F2, nrow = 1)
+#dev.off()
+
+
+F3 <- ggplot(Ob,aes(cong,mean_val)) +
+    geom_line(aes(group=Participant,x=as.numeric(cong), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(~modlab,nrow=1) +
+  scale_x_continuous(name="Congruency", breaks=c(-1,1), labels = c("C","I")) + 
+  scale_y_continuous(limits = c(0, 2500), breaks = c(0, 500, 1000, 1500, 2000, 2500)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Object-Cue: Participant Reaction Times") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+F4 <- ggplot(Object_ME_2,aes(cong,pred1)) +
+    geom_line(aes(group=Participant,x=as.numeric(cong), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(~modlab,nrow=1) +
+    geom_line(aes(y=pred,x=as.numeric(cong)),colour="black") +
+  scale_x_continuous(name="Congruency", breaks=c(-1,1), labels = c("C","I")) + 
+  scale_y_continuous(limits = c(0, 2500), breaks = c(0, 500, 1000, 1500, 2000, 2500)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Object-Cue: Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Object_RandomSlopes2.png", units="in", width=9, height=3, res=300)
+ggarrange(F3, F4, nrow = 1)
+#dev.off()
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=5, fig.width=9}
+
+Object_RanEffAll_ModGrouping <- ggplot(Object_ME_2,aes(mod,pred1)) +
+    geom_line(aes(group=Participant, x = as.numeric(mod), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(Target~conlab,nrow=2) +
+    geom_line(aes(y=pred,x=as.numeric(mod)),colour="black") +
+  scale_x_continuous(name="Modality", breaks=c(-1,1), labels = c("V","O")) + 
+  scale_y_continuous(limits = c(0, 3000), breaks = c(0, 500, 1000, 1500, 2000, 2500, 3000)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Object-Cue: Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Object_RandomEffectsAll_ModalityGrouping.png", units="in", width=9, height=5, res=300)
+Object_RanEffAll_ModGrouping
+#dev.off()
+
+Object_RanEffAll_ConGrouping <- ggplot(Object_ME_2,aes(cong,pred1)) +
+    geom_line(aes(group=Participant,x=as.numeric(cong), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(Target~modlab,nrow=2) +
+    geom_line(aes(y=pred,x=as.numeric(cong)),colour="black") +
+  scale_x_continuous(name="Congruency", breaks=c(-1,1), labels = c("C","I")) + 
+  scale_y_continuous(limits = c(0, 2500), breaks = c(0, 500, 1000, 1500, 2000, 2500)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Object-Cue: Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Object_RandomEffectsAll_CongruencyGrouping.png", units="in", width=9, height=5, res=300)
+Object_RanEffAll_ConGrouping
+#dev.off()
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=3, fig.width=9}
+
+Coeffs <- coef(summary(ObjectModel_Full_RE1))
+Random_Coefs <- data.frame(Coefficient = c("Modality", "Congruency", "Modality*Congruency"),
+                           Estimate = Coeffs[2:4],
+                           Lower = Object_Conf[, 1],
+                           Upper = Object_Conf[, 2],
+                           Summary = c("566 (513, 619)",
+                                       "45 (18, 70)",
+                                       "12 (3,  20)"))
+
+Full <- ggplot(Random_Coefs, aes(x=Coefficient, y=Estimate, color=Coefficient)) + 
+geom_pointrange(aes(ymin=Estimate-(Estimate -Lower), ymax=Estimate+(Upper - Estimate)), size = 1, fatten = 1.5) +
+  coord_flip() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "black", size=0.7, alpha = 0.3) +
+  ggtitle("Object-Cue Random Effects Coefficients") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "none") +
+      theme(axis.title.y=element_blank(),
+            axis.title.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+    scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2")
+
+Seperate <- ggplot(Random_Coefs, aes(x=Coefficient, y=Estimate, color=Coefficient)) + 
+geom_pointrange(aes(ymin=Estimate-(Estimate -Lower), ymax=Estimate+(Upper - Estimate)), size = 1, fatten = 1.5) +
+  facet_wrap(~Coefficient, scales = "free") + 
+  coord_flip() +
+    theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) + 
+  theme(legend.position = "none") +
+    scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  geom_text(
+  data    = Random_Coefs,
+  mapping = aes(x = -Inf, y = -Inf, label = Summary),
+  hjust   = -1,
+  vjust   = -1
+)
+
+#png("Object_RandomCoefficients.png", units="in", width=9, height=3, res=300)
+ggarrange(Full, Seperate, nrow = 2)
+#dev.off()
+
+```
+
+## 11.2 Object-Cue: Random Intercepts for Participant and Item
+```{r message=FALSE, warning=FALSE, fig.height=6, fig.width=10}
+
+#png("Object_Caterpillar_Participant.png", units="in", width=10, height=6, res=300)
+ggCaterpillar(ranef(ObjectModel_Full_RE1, condVar=TRUE))[1]
+#dev.off()
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=2, fig.width=10}
+
+#png("Object_Caterpillar_Item.png", units="in", width=10, height=6, res=300)
+ggCaterpillar(ranef(ObjectModel_Full_RE1, condVar=TRUE))[2]
+#dev.off()
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=2, fig.width=10}
+
+#png("Object_Caterpillar_Item.png", units="in", width=10, height=6, res=300)
+ggCaterpillar(ranef(ObjectModel_Full_RE1, condVar=TRUE))[3]
+#dev.off()
+
+```
+
+```{r message=FALSE, warning=FALSE}
+ObjectModel_Null_1_Conf <- confint(ObjectModel_Null_1, parm = "(Intercept)")
+ObjectModel_Null_2_Conf <- confint(ObjectModel_Null_2, parm = "(Intercept)")
+ObjectModel_Null_3_Conf <- confint(ObjectModel_Null_3, parm = "(Intercept)") 
+ObjectModel_Null_4_Conf <- confint(ObjectModel_Null_4, parm = "(Intercept)")
+ObjectModel_Mod_1_Conf <- confint(ObjectModel_Mod_1, parm = c("(Intercept)", "mod"))
+ObjectModel_Mod_2_Conf <- confint(ObjectModel_Mod_2, parm = c("(Intercept)", "mod"))
+ObjectModel_Mod_3_Conf <- confint(ObjectModel_Mod_3, parm = c("(Intercept)", "mod"))
+#ObjectModel_Mod_4_Conf <- confint(ObjectModel_Mod_4, parm = c("(Intercept)", "mod"))
+ObjectModel_Cong_1_Conf <- confint(ObjectModel_Cong_1, parm = c("(Intercept)", "cong")) 
+ObjectModel_Cong_2_Conf <- confint(ObjectModel_Cong_2, parm = c("(Intercept)", "cong")) 
+ObjectModel_Cong_3_Conf <- confint(ObjectModel_Cong_3, parm = c("(Intercept)", "cong")) 
+ObjectModel_Cong_4_Conf <- confint(ObjectModel_Cong_4, parm = c("(Intercept)", "cong")) 
+ObjectModel_ModPlusCong_1_Conf <- confint(
+  ObjectModel_ModPlusCong_1, parm = c("(Intercept)", "mod", "cong")
+  ) 
+ObjectModel_ModPlusCong_2_Conf <- confint(
+  ObjectModel_ModPlusCong_2, parm = c("(Intercept)", "mod", "cong")
+  ) 
+ObjectModel_ModPlusCong_3_Conf <- confint(ObjectModel_ModPlusCong_3, parm = c("(Intercept)", "mod", "cong")) 
+ObjectModel_ModPlusCong_4_Conf <- confint(ObjectModel_ModPlusCong_4, parm = c("(Intercept)", "mod", "cong")) 
+ObjectModel_Full_1_Conf <- confint(ObjectModel_Full_1, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+ObjectModel_Full_2_Conf <- confint(ObjectModel_Full_2, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+ObjectModel_Full_3_Conf <- confint(ObjectModel_Full_3, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+ObjectModel_Full_4_Conf <- confint(ObjectModel_Full_4, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+
+ObjectModel_Null_1_Coeffs <- as.data.frame(coef(summary(ObjectModel_Null_1)))
+ObjectModel_Null_2_Coeffs <- as.data.frame(coef(summary(ObjectModel_Null_2)))
+ObjectModel_Null_3_Coeffs <- as.data.frame(coef(summary(ObjectModel_Null_3)))
+ObjectModel_Null_4_Coeffs <- as.data.frame(coef(summary(ObjectModel_Null_4)))
+ObjectModel_Mod_1_Coeffs <- as.data.frame(coef(summary(ObjectModel_Mod_1)))
+ObjectModel_Mod_2_Coeffs <- as.data.frame(coef(summary(ObjectModel_Mod_2)))
+ObjectModel_Mod_3_Coeffs <- as.data.frame(coef(summary(ObjectModel_Mod_3)))
+ObjectModel_Mod_4_Coeffs <- as.data.frame(coef(summary(ObjectModel_Mod_4)))
+ObjectModel_Cong_1_Coeffs <- as.data.frame(coef(summary(ObjectModel_Cong_1)))
+ObjectModel_Cong_2_Coeffs <- as.data.frame(coef(summary(ObjectModel_Cong_2)))
+ObjectModel_Cong_3_Coeffs <- as.data.frame(coef(summary(ObjectModel_Cong_3)))
+ObjectModel_Cong_4_Coeffs <- as.data.frame(coef(summary(ObjectModel_Cong_4)))
+ObjectModel_ModPlusCong_1_Coeffs <- as.data.frame(coef(summary(ObjectModel_ModPlusCong_1)))
+ObjectModel_ModPlusCong_2_Coeffs <- as.data.frame(coef(summary(ObjectModel_ModPlusCong_2)))
+ObjectModel_ModPlusCong_3_Coeffs <- as.data.frame(coef(summary(ObjectModel_ModPlusCong_3)))
+ObjectModel_ModPlusCong_4_Coeffs <- as.data.frame(coef(summary(ObjectModel_ModPlusCong_4)))
+ObjectModel_Full_1_Coeffs <- as.data.frame(coef(summary(ObjectModel_Full_1)))
+ObjectModel_Full_2_Coeffs <- as.data.frame(coef(summary(ObjectModel_Full_2)))
+ObjectModel_Full_3_Coeffs <- as.data.frame(coef(summary(ObjectModel_Full_3)))
+ObjectModel_Full_4_Coeffs <- as.data.frame(coef(summary(ObjectModel_Full_4)))
+
+ObjectModel_Null_1_Coeffs <- tibble::rownames_to_column(ObjectModel_Null_1_Coeffs, "Coefficient")
+ObjectModel_Null_2_Coeffs <- tibble::rownames_to_column(ObjectModel_Null_2_Coeffs, "Coefficient")
+ObjectModel_Null_3_Coeffs <- tibble::rownames_to_column(ObjectModel_Null_3_Coeffs, "Coefficient")
+ObjectModel_Null_4_Coeffs <- tibble::rownames_to_column(ObjectModel_Null_4_Coeffs, "Coefficient")
+ObjectModel_Mod_1_Coeffs <- tibble::rownames_to_column(ObjectModel_Mod_1_Coeffs, "Coefficient")
+ObjectModel_Mod_2_Coeffs <- tibble::rownames_to_column(ObjectModel_Mod_2_Coeffs, "Coefficient")
+ObjectModel_Mod_3_Coeffs <- tibble::rownames_to_column(ObjectModel_Mod_3_Coeffs, "Coefficient")
+ObjectModel_Mod_4_Coeffs <- tibble::rownames_to_column(ObjectModel_Mod_4_Coeffs, "Coefficient")
+ObjectModel_Cong_1_Coeffs <- tibble::rownames_to_column(ObjectModel_Cong_1_Coeffs, "Coefficient")
+ObjectModel_Cong_2_Coeffs <- tibble::rownames_to_column(ObjectModel_Cong_2_Coeffs, "Coefficient")
+ObjectModel_Cong_3_Coeffs <- tibble::rownames_to_column(ObjectModel_Cong_3_Coeffs, "Coefficient")
+ObjectModel_Cong_4_Coeffs <- tibble::rownames_to_column(ObjectModel_Cong_4_Coeffs, "Coefficient")
+ObjectModel_ModPlusCong_1_Coeffs <- tibble::rownames_to_column(ObjectModel_ModPlusCong_1_Coeffs, "Coefficient")
+ObjectModel_ModPlusCong_2_Coeffs <- tibble::rownames_to_column(ObjectModel_ModPlusCong_2_Coeffs, "Coefficient")
+ObjectModel_ModPlusCong_3_Coeffs <- tibble::rownames_to_column(ObjectModel_ModPlusCong_3_Coeffs, "Coefficient")
+ObjectModel_ModPlusCong_4_Coeffs <- tibble::rownames_to_column(ObjectModel_ModPlusCong_4_Coeffs, "Coefficient")
+ObjectModel_Full_1_Coeffs <- tibble::rownames_to_column(ObjectModel_Full_1_Coeffs, "Coefficient")
+ObjectModel_Full_2_Coeffs <- tibble::rownames_to_column(ObjectModel_Full_2_Coeffs, "Coefficient")
+ObjectModel_Full_3_Coeffs <- tibble::rownames_to_column(ObjectModel_Full_3_Coeffs, "Coefficient")
+ObjectModel_Full_4_Coeffs <- tibble::rownames_to_column(ObjectModel_Full_4_Coeffs, "Coefficient")
+
+ObjectModel_Null_1_Coeffs$Lower <- ObjectModel_Null_1_Conf[1, 1]
+ObjectModel_Null_2_Coeffs$Lower <- ObjectModel_Null_2_Conf[1, 1]
+ObjectModel_Null_3_Coeffs$Lower <- ObjectModel_Null_3_Conf[1, 1]
+ObjectModel_Null_4_Coeffs$Lower <- ObjectModel_Null_4_Conf[1, 1]
+ObjectModel_Mod_1_Coeffs$Lower <- ObjectModel_Mod_1_Conf[1:2, 1]
+ObjectModel_Mod_2_Coeffs$Lower <- ObjectModel_Mod_2_Conf[1:2, 1]
+ObjectModel_Mod_3_Coeffs$Lower <- ObjectModel_Mod_3_Conf[1:2, 1]
+#ObjectModel_Mod_4_Coeffs$Lower <- ObjectModel_Mod_4_Conf[1]
+ObjectModel_Cong_1_Coeffs$Lower <- ObjectModel_Cong_1_Conf[1:2, 1]
+ObjectModel_Cong_2_Coeffs$Lower <- ObjectModel_Cong_2_Conf[1:2, 1]
+ObjectModel_Cong_3_Coeffs$Lower <- ObjectModel_Cong_3_Conf[1:2, 1]
+ObjectModel_Cong_4_Coeffs$Lower <- ObjectModel_Cong_4_Conf[1:2, 1]
+ObjectModel_ModPlusCong_1_Coeffs$Lower <- ObjectModel_ModPlusCong_1_Conf[1:3,1]
+ObjectModel_ModPlusCong_2_Coeffs$Lower <- ObjectModel_ModPlusCong_2_Conf[1:3,1]
+ObjectModel_ModPlusCong_3_Coeffs$Lower <- ObjectModel_ModPlusCong_3_Conf[1:3,1]
+ObjectModel_ModPlusCong_4_Coeffs$Lower <- ObjectModel_ModPlusCong_4_Conf[1:3,1]
+ObjectModel_Full_1_Coeffs$Lower <- ObjectModel_Full_1_Conf[1:4, 1]
+ObjectModel_Full_2_Coeffs$Lower <- ObjectModel_Full_2_Conf[1:4, 1]
+ObjectModel_Full_3_Coeffs$Lower <- ObjectModel_Full_3_Conf[1:4, 1]
+ObjectModel_Full_4_Coeffs$Lower <- ObjectModel_Full_4_Conf[1:4, 1]
+
+ObjectModel_Null_1_Coeffs$Upper <- ObjectModel_Null_1_Conf[1, 2]
+ObjectModel_Null_2_Coeffs$Upper <- ObjectModel_Null_2_Conf[1, 2]
+ObjectModel_Null_3_Coeffs$Upper <- ObjectModel_Null_3_Conf[1, 2]
+ObjectModel_Null_4_Coeffs$Upper <- ObjectModel_Null_4_Conf[1, 2]
+ObjectModel_Mod_1_Coeffs$Upper <- ObjectModel_Mod_1_Conf[1:2, 2]
+ObjectModel_Mod_2_Coeffs$Upper <- ObjectModel_Mod_2_Conf[1:2, 2]
+ObjectModel_Mod_3_Coeffs$Upper <- ObjectModel_Mod_3_Conf[1:2, 2]
+#ObjectModel_Mod_4_Coeffs$Upper <- ObjectModel_Mod_4_Conf[2]
+ObjectModel_Cong_1_Coeffs$Upper <- ObjectModel_Cong_1_Conf[1:2, 2]
+ObjectModel_Cong_2_Coeffs$Upper <- ObjectModel_Cong_2_Conf[1:2, 2]
+ObjectModel_Cong_3_Coeffs$Upper <- ObjectModel_Cong_3_Conf[1:2, 2]
+ObjectModel_Cong_4_Coeffs$Upper <- ObjectModel_Cong_4_Conf[1:2, 2]
+ObjectModel_ModPlusCong_1_Coeffs$Upper <- ObjectModel_ModPlusCong_1_Conf[1:3, 2]
+ObjectModel_ModPlusCong_2_Coeffs$Upper <- ObjectModel_ModPlusCong_2_Conf[1:3, 2]
+ObjectModel_ModPlusCong_3_Coeffs$Upper <- ObjectModel_ModPlusCong_3_Conf[1:3, 2]
+ObjectModel_ModPlusCong_4_Coeffs$Upper <- ObjectModel_ModPlusCong_4_Conf[1:3, 2]
+ObjectModel_Full_1_Coeffs$Upper <- ObjectModel_Full_1_Conf[1:4, 2]
+ObjectModel_Full_2_Coeffs$Upper <- ObjectModel_Full_2_Conf[1:4, 2]
+ObjectModel_Full_3_Coeffs$Upper <- ObjectModel_Full_3_Conf[1:4, 2]
+ObjectModel_Full_4_Coeffs$Upper <- ObjectModel_Full_4_Conf[1:4, 2]
+
+Object_Coeffs_Full <- rbind(ObjectModel_Null_1_Coeffs, ObjectModel_Null_2_Coeffs, ObjectModel_Null_3_Coeffs, ObjectModel_Null_4_Coeffs, ObjectModel_Mod_1_Coeffs, ObjectModel_Mod_2_Coeffs, ObjectModel_Mod_3_Coeffs, ObjectModel_Cong_1_Coeffs, ObjectModel_Cong_2_Coeffs, ObjectModel_Cong_3_Coeffs, ObjectModel_Cong_4_Coeffs, ObjectModel_ModPlusCong_1_Coeffs, ObjectModel_ModPlusCong_2_Coeffs, ObjectModel_ModPlusCong_3_Coeffs, ObjectModel_ModPlusCong_4_Coeffs, ObjectModel_Full_1_Coeffs, ObjectModel_Full_2_Coeffs, ObjectModel_Full_3_Coeffs, ObjectModel_Full_4_Coeffs)
+
+Object_Coeffs_Full$Model <- c(
+  "ReactionTime ~ (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+  "ReactionTime ~ (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+  "ReactionTime ~ mod + (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ mod + (1|Participant) + (1|Target) + (1|Cue)",
+  "ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+  "ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+  "ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod + cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod + cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod + cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target) + (1|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target) + (1 + mod|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target) + (1 + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target) + (1 + mod + cong|Cue)")
+
+keeps <- c("Model", "Coefficient", "Estimate", "Upper", "Lower", "Pr(>|t|)")
+Object_Coeffs_Full = Object_Coeffs_Full[keeps]
+Object_Coeffs_Full$Upper <- Object_Coeffs_Full$Upper - Object_Coeffs_Full$Estimate
+Object_Coeffs_Full$Lower <- Object_Coeffs_Full$Estimate - Object_Coeffs_Full$Lower
+
+```
+
+```{r message=FALSE, warning=FALSE,fig.height= 10, fig.width=10}
+
+Object_ModelComp_Intercept_1 <- ggplot(Object_Coeffs_Full, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Model)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 1, width=.2,
+                position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+    coord_flip() +
+  ggtitle("Object-Cue Model Comparison Parameter Estimates") + 
+theme(legend.position = "none") +    scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2")
+
+#png("Object_ModelComp_Intercept_1.png", units="in", width=10, height=10, res=300)
+Object_ModelComp_Intercept_1
+#dev.off()
+
+Object_ModelComp_Intercept_1
+```
+
+```{r message=FALSE, warning=FALSE,fig.height= 5, fig.width=10}
+
+Object_ModelComp_Intercept_2 <- ggplot(Object_Coeffs_Full, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Coefficient)) +
+  geom_point(position=position_dodge(.9),size = 1.2) +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate + Upper), size = 0.7, width=.2, position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+    coord_flip() +
+  ggtitle("Object-Cue Model Comparison Parameter Estimates") + 
+  theme(legend.position = "bottom") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  geom_hline(yintercept = 0, linetype="dashed", color = "black", size=0.3, alpha = 0.7)
+
+#png("Object_ModelComp_Intercept_1.png", units="in", width=10, height=4, res=300)
+Object_ModelComp_Intercept_2
+#dev.off()
+
+Object_ModelComp_Intercept_2
+
+```
+
+```{r message=FALSE, warning=FALSE}
+Object_Coeffs_Full_NoInt <- Object_Coeffs_Full[Object_Coeffs_Full$Coefficient!= "(Intercept)", ]
+```
+
+
+```{r message=FALSE, warning=FALSE,fig.height= 6, fig.width=8}
+
+Object_Models_NoIntercept_Plot1 <- ggplot(Object_Coeffs_Full_NoInt, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Model)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 1, width=.2, position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+  coord_flip() +
+  ggtitle("Object-Cue Model Comparison Parameter Estimates") + 
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set2") +
+  theme(plot.title = element_text(size=8)) +
+  scale_color_brewer(palette = "Set2")
+
+#png("Object_ModelComp1_NoIntercept.png", units="in", width=8, height=6, res=300)
+Object_Models_NoIntercept_Plot1
+#dev.off()
+
+Object_Models_NoIntercept_Plot1
+```
+
+```{r message=FALSE, warning=FALSE,fig.height= 4, fig.width=10}
+
+Object_Models_NoIntercept_Plot2 <- ggplot(Object_Coeffs_Full_NoInt, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Coefficient)) +
+  geom_point(position=position_dodge(.9),size = 1.2) +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 0.7, width=.2,
+                position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  #facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+    coord_flip() +
+  ggtitle("Object-Cue Model Comparison Parameter Estimates") + 
+theme(legend.position = "bottom") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "black", size=0.3, alpha = 0.7)
+
+#png("Object_ModelComp2_NoIntercept.png", units="in", width=10, height=4, res=300)
+Object_Models_NoIntercept_Plot2
+#dev.off()
+
+Object_Models_NoIntercept_Plot2
+
+```
+
+## 11.1 Category-Cue Mixed Effect Model
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The random participant intercepts account for a ecent amount of random error, while the cue-target intercepts account for less. The fixed coefficient results match the ANOVA.
+
+```{r Category Model Evaluation, message=FALSE, warning=FALSE}
+
+# Null Models
+CategoryModel_Null_1  <- lmer(ReactionTime ~ (1|Participant) + (1|Target), data= Category_ME_2)
+CategoryModel_Null_2  <- lmer(ReactionTime ~ (1 + mod|Participant) + (1 + mod|Target), data= Category_ME_2)
+CategoryModel_Null_3  <- lmer(ReactionTime ~ (1 + cong|Participant) + (1 + cong|Target), data= Category_ME_2)
+CategoryModel_Null_4  <- lmer(ReactionTime ~ (1 + mod + cong|Participant) + (1 + mod + cong|Target), data= Category_ME_2)
+CategoryModel_Mod_1  <- lmer(ReactionTime ~ mod + (1|Participant) + (1|Target), data= Category_ME_2)
+CategoryModel_Mod_2  <- lmer(ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target), data= Category_ME_2)
+CategoryModel_Mod_3  <- lmer(ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target), data= Category_ME_2)
+CategoryModel_Mod_4  <- lmer(ReactionTime ~ mod + (1 + mod + cong|Participant) + (1 + mod + cong|Target), data= Category_ME_2)
+CategoryModel_Cong_1  <- lmer(ReactionTime ~ cong + (1|Participant) + (1|Target), data= Category_ME_2)
+CategoryModel_Cong_2  <- lmer(ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target), data= Category_ME_2)
+CategoryModel_Cong_3  <- lmer(ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target), data= Category_ME_2)
+CategoryModel_Cong_4  <- lmer(ReactionTime ~ cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target), data= Category_ME_2)
+CategoryModel_ModPlusCong_1  <- lmer(ReactionTime ~ mod + cong + (1|Participant) + (1|Target), data= Category_ME_2)
+CategoryModel_ModPlusCong_2  <- lmer(ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target), data= Category_ME_2)
+CategoryModel_ModPlusCong_3  <- lmer(ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target), data= Category_ME_2)
+CategoryModel_ModPlusCong_4  <- lmer(ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target), data= Category_ME_2)
+CategoryModel_Full_1  <- lmer(ReactionTime ~ mod*cong + (1|Participant) + (1|Target), data= Category_ME_2)
+CategoryModel_Full_2  <- lmer(ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target), data= Category_ME_2)
+CategoryModel_Full_3  <- lmer(ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target), data= Category_ME_2)
+CategoryModel_Full_4  <- lmer(ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target), data= Category_ME_2)
+
+
+Category_Model_Selection <- anova(CategoryModel_Null_1, CategoryModel_Null_2, CategoryModel_Null_3, CategoryModel_Null_4, CategoryModel_Mod_1, CategoryModel_Mod_2, CategoryModel_Mod_3, CategoryModel_Mod_4, CategoryModel_Cong_1, CategoryModel_Cong_2, CategoryModel_Cong_3, CategoryModel_Cong_4, CategoryModel_ModPlusCong_1, CategoryModel_ModPlusCong_2, CategoryModel_ModPlusCong_3, CategoryModel_ModPlusCong_4, CategoryModel_Full_1, CategoryModel_Full_2, CategoryModel_Full_3, CategoryModel_Full_4)
+
+Category_Model_Selection <- as.data.frame(setDT(Category_Model_Selection, keep.rownames = TRUE)[])
+
+Category_Model_Selection$Model_lmer <- c("ReactionTime ~ (1|Participant) + (1|Target)", "ReactionTime ~ mod + (1|Participant) + (1|Target)", "ReactionTime ~ cong + (1|Participant) + (1|Target)", "ReactionTime ~ mod + cong + (1|Participant) + (1|Target)", "ReactionTime ~ mod*cong + (1|Participant) + (1|Target)", "ReactionTime ~ (1 + mod|Participant) + (1 + mod|Target)", "ReactionTime ~ (1 + cong|Participant) + (1 + cong|Target)", "ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target)", "ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target)", "ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target)", "ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target)", "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target)", "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target)", "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target)", "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target)", "ReactionTime ~ (1 + mod + cong|Participant) + (1 + mod + cong|Target)", "ReactionTime ~ mod + (1 + mod + cong|Participant) + (1 + mod + cong|Target)", "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)", "ReactionTime ~ mod + cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)", "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)")
+
+keeps <- c("Model_lmer", "AIC", "Pr(>Chisq)")
+Category_Model_Selection = Category_Model_Selection[keeps]
+
+kable(Category_Model_Selection, label = "Category-cue Random Effects Models")
+
+```
+
+```{r Category Mixed Model, message=FALSE, warning=FALSE}
+
+# This is the full participant-item model. It includes two predictors, an interaction,
+# random participant effects for intercept and slopes, random item intercept and
+# slopes, and correlations between random effects.
+
+#ObjectModel_Full_RE1  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1|Participant) + (1 |Item), data= Object_ME)
+
+CategoryModel_Full_RE1  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1 + mod+cong|Participant) + (1 + mod+cong|Target), data= Category_ME_2)
+```
+
+```{r Category Summary, message=FALSE, warning=FALSE}
+summary(CategoryModel_Full_RE1)
+tab_model(CategoryModel_Full_RE1)
+```
+
+```{r Category Fixed-Effects Summary, message=FALSE, warning=FALSE}
+kable(coef(summary(CategoryModel_Full_RE1)))
+```
+
+```{r Category Random-Effects Variance Summary, message=FALSE, warning=FALSE}
+kable(VarCorr(CategoryModel_Full_RE1))
+```
+
+```{r Category Confidence Intervals, message=FALSE, warning=FALSE}
+Category_Conf <- confint(CategoryModel_Full_RE1, parm = c("mod", "cong", "mod:cong"))
+kable(Category_Conf)
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=3, fig.width=9}
+
+Category_ME_Participant <- ddply(Category_ME, c("Participant", "Modality", "Congruency"), summarize, 
+           ReactionTime = mean(ReactionTime, na.rm = T))
+Category_ME_Participant$mod <- ifelse(Category_ME_Participant$Modality == "Visual", -1, 1)
+Category_ME_Participant$cong <- ifelse(Category_ME_Participant$Congruency == "Congruent", -1, 1)
+Category_ME_Participant$Cue <- c("Category")
+
+
+Category_ME_2$conlab <- factor(Category_ME_2$cong, labels = c("Congruent", "Incongruent"))
+Category_ME_2$modlab <- factor(Category_ME_2$mod, labels = c("Visual", "Olfactory"))
+Category_ME_2$pred <- predict(CategoryModel_Full_RE1,re.form=NA)  ## population level
+Category_ME_2$pred1 <- predict(CategoryModel_Full_RE1) ## individual level
+
+Cat <- Category_ME_2 %>%
+  group_by(Participant, mod, cong) %>%
+  summarize(mean_val = mean(ReactionTime))
+Cat$conlab <- factor(Cat$cong, labels = c("Congruent", "Incongruent"))
+Cat$modlab <- factor(Cat$mod, labels = c("Visual", "Olfactory"))
+
+N1 <- ggplot(Cat,aes(mod,mean_val)) +
+    geom_line(aes(group=Participant,x=as.numeric(mod), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(~conlab,nrow=1) +
+  scale_x_continuous(name="Modality", breaks=c(-1,1), labels = c("V","O")) + 
+  scale_y_continuous(limits = c(0, 3000), breaks = c(0, 500, 1000, 1500, 2000, 2500, 3000)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Mean Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+N2 <- ggplot(Category_ME_2,aes(mod,pred1)) +
+    geom_line(aes(group=Participant, x = as.numeric(mod), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(~conlab,nrow=1) +
+    geom_line(aes(y=pred,x=as.numeric(mod)),colour="black") +
+  scale_x_continuous(name="Modality", breaks=c(-1,1), labels = c("V","O")) + 
+  scale_y_continuous(limits = c(0, 3000), breaks = c(0, 500, 1000, 1500, 2000, 2500, 3000)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Category_RandomSlopes1.png", units="in", width=9, height=3, res=300)
+ggarrange(N1, N2, nrow = 1)
+#dev.off()
+
+
+N3 <- ggplot(Cat,aes(cong,mean_val)) +
+    geom_line(aes(group=Participant,x=as.numeric(cong), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(~modlab,nrow=1) +
+  scale_x_continuous(name="Congruency", breaks=c(-1,1), labels = c("C","I")) + 
+  scale_y_continuous(limits = c(0, 2500), breaks = c(0, 500, 1000, 1500, 2000, 2500)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Mean Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+N4 <- ggplot(Category_ME_2,aes(cong,pred1)) +
+    geom_line(aes(group=Participant,x=as.numeric(cong), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(~modlab,nrow=1) +
+    geom_line(aes(y=pred,x=as.numeric(cong)),colour="black") +
+  scale_x_continuous(name="Congruency", breaks=c(-1,1), labels = c("C","I")) + 
+  scale_y_continuous(limits = c(0, 2500), breaks = c(0, 500, 1000, 1500, 2000, 2500)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Category_RandomSlopes2.png", units="in", width=9, height=3, res=300)
+ggarrange(N3, N4, nrow = 1)
+#dev.off()
+
+ggarrange(N1, N2, nrow = 1)
+ggarrange(N3, N4, nrow = 1)
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=5, fig.width=9}
+
+Category_RanEffAll_ModGrouping <- ggplot(Category_ME_2,aes(mod,pred1)) +
+    geom_line(aes(group=Participant, x = as.numeric(mod), color = Participant)) +
+    facet_wrap(Target~conlab,nrow=2) +
+    geom_line(aes(y=pred,x=as.numeric(mod)),colour="black") +
+  scale_x_continuous(name="Modality", breaks=c(-1,1), labels = c("V","O")) + 
+  scale_y_continuous(limits = c(0, 3000), breaks = c(0, 500, 1000, 1500, 2000, 2500, 3000)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Category_RandomEffectsAll_ModGrouping.png", units="in", width=9, height=5, res=300)
+Category_RanEffAll_ModGrouping
+#dev.off()
+
+Category_RanEffAll_ConGrouping <- ggplot(Category_ME_2,aes(cong,pred1)) +
+    geom_line(aes(group=Participant,x=as.numeric(cong), color = Participant)) +
+    #facet_wrap(~cong,scale="free_y",nrow=1) +
+    facet_wrap(Target~modlab,nrow=2) +
+    geom_line(aes(y=pred,x=as.numeric(cong)),colour="black") +
+  scale_x_continuous(name="Congruency", breaks=c(-1,1), labels = c("C","I")) + 
+  scale_y_continuous(limits = c(0, 2500), breaks = c(0, 500, 1000, 1500, 2000, 2500)) +
+  theme(panel.spacing = unit(2, "lines")) + 
+  theme(legend.position = "none") +
+  ylab("Reaction Time") + 
+  ggtitle("Fitted Intercept/Slope Reaction Time") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=12))
+
+#png("Category_RandomEffectsAll_ConGrouping.png", units="in", width=9, height=5, res=300)
+Category_RanEffAll_ConGrouping
+#dev.off()
+
+Category_RanEffAll_ModGrouping
+Category_RanEffAll_ConGrouping
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=3, fig.width=9}
+
+Coeffs <- coef(summary(CategoryModel_Full_RE1))
+Random_Coefs <- data.frame(Coefficient = c("Modality", "Congruency", "Modality*Congruency"),
+                           Estimate = Coeffs[2:4],
+                           Lower = Category_Conf[, 1],
+                           Upper = Category_Conf[, 2],
+                           Summary = c("622 (550, 692)",
+                                       "38 (19, 58)",
+                                       "2 (-7,  11)"))
+
+Full <- ggplot(Random_Coefs, aes(x=Coefficient, y=Estimate, color=Coefficient)) + 
+geom_pointrange(aes(ymin=Estimate-(Estimate -Lower), ymax=Estimate+(Upper - Estimate)), size = 1, fatten = 1.5) +
+  coord_flip() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "black", size=0.7, alpha = 0.3) +
+  ggtitle("Category-Cue Random Effects Coefficients") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "none") +
+      theme(axis.title.y=element_blank(),
+            axis.title.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+    scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2")
+
+Seperate <- ggplot(Random_Coefs, aes(x=Coefficient, y=Estimate, color=Coefficient)) + 
+geom_pointrange(aes(ymin=Estimate-(Estimate -Lower), ymax=Estimate+(Upper - Estimate)), size = 1, fatten = 1.5) +
+  facet_wrap(~Coefficient, scales = "free") + 
+  coord_flip() +
+    theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) + 
+  theme(legend.position = "none") +
+    scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  geom_text(
+  data    = Random_Coefs,
+  mapping = aes(x = -Inf, y = -Inf, label = Summary),
+  hjust   = -1,
+  vjust   = -1
+)
+
+#png("Category_RandomCoefficients.png", units="in", width=9, height=3, res=300)
+ggarrange(Full, Seperate, nrow = 2)
+#dev.off()
+
+ggarrange(Full, Seperate, nrow = 2)
+
+```
+
+
+
+## 11.2 Category-Cue: Random Intercepts for Participant and Item
+```{r message=FALSE, warning=FALSE, fig.height=6, fig.width=10}
+
+#png("Category_Caterpillar_Participant.png", units="in", width=10, height=6, res=300)
+ggCaterpillar(ranef(CategoryModel_Full_RE1, condVar=TRUE))[1]
+#dev.off()
+
+ggCaterpillar(ranef(CategoryModel_Full_RE1, condVar=TRUE))[1]
+
+```
+
+```{r message=FALSE, warning=FALSE, fig.height=2, fig.width=10}
+
+#png("Category_Caterpillar_Item.png", units="in", width=10, height=6, res=300)
+ggCaterpillar(ranef(CategoryModel_Full_RE1, condVar=TRUE))[2]
+#dev.off()
+
+ggCaterpillar(ranef(CategoryModel_Full_RE1, condVar=TRUE))[2]
+
+```
+
+```{r message=FALSE, warning=FALSE}
+CategoryModel_Null_1_Conf <- confint(CategoryModel_Null_1, parm = "(Intercept)")
+CategoryModel_Null_2_Conf <- confint(CategoryModel_Null_2, parm = "(Intercept)")
+CategoryModel_Null_3_Conf <- confint(CategoryModel_Null_3, parm = "(Intercept)") 
+#CategoryModel_Null_4_Conf <- confint(CategoryModel_Null_4, parm = "(Intercept)")
+CategoryModel_Mod_1_Conf <- confint(CategoryModel_Mod_1, parm = c("(Intercept)", "mod"))
+CategoryModel_Mod_2_Conf <- confint(CategoryModel_Mod_2, parm = c("(Intercept)", "mod"))
+CategoryModel_Mod_3_Conf <- confint(CategoryModel_Mod_3, parm = c("(Intercept)", "mod"))
+CategoryModel_Mod_4_Conf <- confint(CategoryModel_Mod_4, parm = c("(Intercept)", "mod"))
+CategoryModel_Cong_1_Conf <- confint(CategoryModel_Cong_1, parm = c("(Intercept)", "cong")) 
+CategoryModel_Cong_2_Conf <- confint(CategoryModel_Cong_2, parm = c("(Intercept)", "cong")) 
+CategoryModel_Cong_3_Conf <- confint(CategoryModel_Cong_3, parm = c("(Intercept)", "cong")) 
+#CategoryModel_Cong_4_Conf <- confint(CategoryModel_Cong_4, parm = c("(Intercept)", "cong")) ##!
+CategoryModel_ModPlusCong_1_Conf <- confint(CategoryModel_ModPlusCong_1, parm = c("(Intercept)", "mod", "cong")) 
+CategoryModel_ModPlusCong_2_Conf <- confint(CategoryModel_ModPlusCong_2, parm = c("(Intercept)", "mod", "cong")) 
+CategoryModel_ModPlusCong_3_Conf <- confint(CategoryModel_ModPlusCong_3, parm = c("(Intercept)", "mod", "cong")) 
+#CategoryModel_ModPlusCong_4_Conf <- confint(CategoryModel_ModPlusCong_4, parm = c("(Intercept)", "mod", "cong")) 
+CategoryModel_Full_1_Conf <- confint(CategoryModel_Full_1, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+CategoryModel_Full_2_Conf <- confint(CategoryModel_Full_2, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+CategoryModel_Full_3_Conf <- confint(CategoryModel_Full_3, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+CategoryModel_Full_4_Conf <- confint(CategoryModel_Full_4, parm = c("(Intercept)", "mod", "cong", "mod:cong")) 
+
+CategoryModel_Null_1_Coeffs <- as.data.frame(coef(summary(CategoryModel_Null_1)))
+CategoryModel_Null_2_Coeffs <- as.data.frame(coef(summary(CategoryModel_Null_2)))
+CategoryModel_Null_3_Coeffs <- as.data.frame(coef(summary(CategoryModel_Null_3)))
+CategoryModel_Null_4_Coeffs <- as.data.frame(coef(summary(CategoryModel_Null_4)))
+CategoryModel_Mod_1_Coeffs <- as.data.frame(coef(summary(CategoryModel_Mod_1)))
+CategoryModel_Mod_2_Coeffs <- as.data.frame(coef(summary(CategoryModel_Mod_2)))
+CategoryModel_Mod_3_Coeffs <- as.data.frame(coef(summary(CategoryModel_Mod_3)))
+CategoryModel_Mod_4_Coeffs <- as.data.frame(coef(summary(CategoryModel_Mod_4)))
+CategoryModel_Cong_1_Coeffs <- as.data.frame(coef(summary(CategoryModel_Cong_1)))
+CategoryModel_Cong_2_Coeffs <- as.data.frame(coef(summary(CategoryModel_Cong_2)))
+CategoryModel_Cong_3_Coeffs <- as.data.frame(coef(summary(CategoryModel_Cong_3)))
+#CategoryModel_Cong_4_Coeffs <- as.data.frame(coef(summary(CategoryModel_Cong_4)))
+CategoryModel_ModPlusCong_1_Coeffs <- as.data.frame(coef(summary(CategoryModel_ModPlusCong_1)))
+CategoryModel_ModPlusCong_2_Coeffs <- as.data.frame(coef(summary(CategoryModel_ModPlusCong_2)))
+CategoryModel_ModPlusCong_3_Coeffs <- as.data.frame(coef(summary(CategoryModel_ModPlusCong_3)))
+CategoryModel_ModPlusCong_4_Coeffs <- as.data.frame(coef(summary(CategoryModel_ModPlusCong_4)))
+CategoryModel_Full_1_Coeffs <- as.data.frame(coef(summary(CategoryModel_Full_1)))
+CategoryModel_Full_2_Coeffs <- as.data.frame(coef(summary(CategoryModel_Full_2)))
+CategoryModel_Full_3_Coeffs <- as.data.frame(coef(summary(CategoryModel_Full_3)))
+CategoryModel_Full_4_Coeffs <- as.data.frame(coef(summary(CategoryModel_Full_4)))
+
+CategoryModel_Null_1_Coeffs <- tibble::rownames_to_column(CategoryModel_Null_1_Coeffs, "Coefficient")
+CategoryModel_Null_2_Coeffs <- tibble::rownames_to_column(CategoryModel_Null_2_Coeffs, "Coefficient")
+CategoryModel_Null_3_Coeffs <- tibble::rownames_to_column(CategoryModel_Null_3_Coeffs, "Coefficient")
+CategoryModel_Null_4_Coeffs <- tibble::rownames_to_column(CategoryModel_Null_4_Coeffs, "Coefficient")
+CategoryModel_Mod_1_Coeffs <- tibble::rownames_to_column(CategoryModel_Mod_1_Coeffs, "Coefficient")
+CategoryModel_Mod_2_Coeffs <- tibble::rownames_to_column(CategoryModel_Mod_2_Coeffs, "Coefficient")
+CategoryModel_Mod_3_Coeffs <- tibble::rownames_to_column(CategoryModel_Mod_3_Coeffs, "Coefficient")
+CategoryModel_Mod_4_Coeffs <- tibble::rownames_to_column(CategoryModel_Mod_4_Coeffs, "Coefficient")
+CategoryModel_Cong_1_Coeffs <- tibble::rownames_to_column(CategoryModel_Cong_1_Coeffs, "Coefficient")
+CategoryModel_Cong_2_Coeffs <- tibble::rownames_to_column(CategoryModel_Cong_2_Coeffs, "Coefficient")
+CategoryModel_Cong_3_Coeffs <- tibble::rownames_to_column(CategoryModel_Cong_3_Coeffs, "Coefficient")
+#CategoryModel_Cong_4_Coeffs <- tibble::rownames_to_column(CategoryModel_Cong_4_Coeffs, "Coefficient")
+CategoryModel_ModPlusCong_1_Coeffs <- tibble::rownames_to_column(CategoryModel_ModPlusCong_1_Coeffs, "Coefficient")
+CategoryModel_ModPlusCong_2_Coeffs <- tibble::rownames_to_column(CategoryModel_ModPlusCong_2_Coeffs, "Coefficient")
+CategoryModel_ModPlusCong_3_Coeffs <- tibble::rownames_to_column(CategoryModel_ModPlusCong_3_Coeffs, "Coefficient")
+CategoryModel_ModPlusCong_4_Coeffs <- tibble::rownames_to_column(CategoryModel_ModPlusCong_4_Coeffs, "Coefficient")
+CategoryModel_Full_1_Coeffs <- tibble::rownames_to_column(CategoryModel_Full_1_Coeffs, "Coefficient")
+CategoryModel_Full_2_Coeffs <- tibble::rownames_to_column(CategoryModel_Full_2_Coeffs, "Coefficient")
+CategoryModel_Full_3_Coeffs <- tibble::rownames_to_column(CategoryModel_Full_3_Coeffs, "Coefficient")
+CategoryModel_Full_4_Coeffs <- tibble::rownames_to_column(CategoryModel_Full_4_Coeffs, "Coefficient")
+
+CategoryModel_Null_1_Coeffs$Lower <- CategoryModel_Null_1_Conf[1, 1]
+CategoryModel_Null_2_Coeffs$Lower <- CategoryModel_Null_2_Conf[1, 1]
+CategoryModel_Null_3_Coeffs$Lower <- CategoryModel_Null_3_Conf[1, 1]
+#CategoryModel_Null_4_Coeffs$Lower <- CategoryModel_Null_4_Conf[1, 1]
+CategoryModel_Mod_1_Coeffs$Lower <- CategoryModel_Mod_1_Conf[1:2, 1]
+CategoryModel_Mod_2_Coeffs$Lower <- CategoryModel_Mod_2_Conf[1:2, 1]
+CategoryModel_Mod_3_Coeffs$Lower <- CategoryModel_Mod_3_Conf[1:2, 1]
+CategoryModel_Mod_4_Coeffs$Lower <- CategoryModel_Mod_4_Conf[1]
+CategoryModel_Cong_1_Coeffs$Lower <- CategoryModel_Cong_1_Conf[1:2, 1]
+CategoryModel_Cong_2_Coeffs$Lower <- CategoryModel_Cong_2_Conf[1:2, 1]
+CategoryModel_Cong_3_Coeffs$Lower <- CategoryModel_Cong_3_Conf[1:2, 1]
+#CategoryModel_Cong_4_Coeffs$Lower <- CategoryModel_Cong_4_Conf[1:2, 1]
+CategoryModel_ModPlusCong_1_Coeffs$Lower <- CategoryModel_ModPlusCong_1_Conf[1:3,1]
+CategoryModel_ModPlusCong_2_Coeffs$Lower <- CategoryModel_ModPlusCong_2_Conf[1:3,1]
+CategoryModel_ModPlusCong_3_Coeffs$Lower <- CategoryModel_ModPlusCong_3_Conf[1:3,1]
+#CategoryModel_ModPlusCong_4_Coeffs$Lower <- CategoryModel_ModPlusCong_4_Conf[1:3,1]
+CategoryModel_Full_1_Coeffs$Lower <- CategoryModel_Full_1_Conf[1:4, 1]
+CategoryModel_Full_2_Coeffs$Lower <- CategoryModel_Full_2_Conf[1:4, 1]
+CategoryModel_Full_3_Coeffs$Lower <- CategoryModel_Full_3_Conf[1:4, 1]
+CategoryModel_Full_4_Coeffs$Lower <- CategoryModel_Full_4_Conf[1:4, 1]
+
+CategoryModel_Null_1_Coeffs$Upper <- CategoryModel_Null_1_Conf[1, 2]
+CategoryModel_Null_2_Coeffs$Upper <- CategoryModel_Null_2_Conf[1, 2]
+CategoryModel_Null_3_Coeffs$Upper <- CategoryModel_Null_3_Conf[1, 2]
+#CategoryModel_Null_4_Coeffs$Upper <- CategoryModel_Null_4_Conf[1, 2]
+CategoryModel_Mod_1_Coeffs$Upper <- CategoryModel_Mod_1_Conf[1:2, 2]
+CategoryModel_Mod_2_Coeffs$Upper <- CategoryModel_Mod_2_Conf[1:2, 2]
+CategoryModel_Mod_3_Coeffs$Upper <- CategoryModel_Mod_3_Conf[1:2, 2]
+CategoryModel_Mod_4_Coeffs$Upper <- CategoryModel_Mod_4_Conf[2]
+CategoryModel_Cong_1_Coeffs$Upper <- CategoryModel_Cong_1_Conf[1:2, 2]
+CategoryModel_Cong_2_Coeffs$Upper <- CategoryModel_Cong_2_Conf[1:2, 2]
+CategoryModel_Cong_3_Coeffs$Upper <- CategoryModel_Cong_3_Conf[1:2, 2]
+#CategoryModel_Cong_4_Coeffs$Upper <- CategoryModel_Cong_4_Conf[1:2, 2]
+CategoryModel_ModPlusCong_1_Coeffs$Upper <- CategoryModel_ModPlusCong_1_Conf[1:3, 2]
+CategoryModel_ModPlusCong_2_Coeffs$Upper <- CategoryModel_ModPlusCong_2_Conf[1:3, 2]
+CategoryModel_ModPlusCong_3_Coeffs$Upper <- CategoryModel_ModPlusCong_3_Conf[1:3, 2]
+#CategoryModel_ModPlusCong_4_Coeffs$Upper <- CategoryModel_ModPlusCong_4_Conf[1:3, 2]
+CategoryModel_Full_1_Coeffs$Upper <- CategoryModel_Full_1_Conf[1:4, 2]
+CategoryModel_Full_2_Coeffs$Upper <- CategoryModel_Full_2_Conf[1:4, 2]
+CategoryModel_Full_3_Coeffs$Upper <- CategoryModel_Full_3_Conf[1:4, 2]
+CategoryModel_Full_4_Coeffs$Upper <- CategoryModel_Full_4_Conf[1:4, 2]
+
+Category_Coeffs_Full <- rbind(CategoryModel_Null_1_Coeffs, CategoryModel_Null_2_Coeffs, CategoryModel_Null_3_Coeffs, CategoryModel_Mod_1_Coeffs, CategoryModel_Mod_2_Coeffs, CategoryModel_Mod_3_Coeffs, CategoryModel_Cong_1_Coeffs, CategoryModel_Cong_2_Coeffs, CategoryModel_Cong_3_Coeffs, CategoryModel_ModPlusCong_1_Coeffs, CategoryModel_ModPlusCong_2_Coeffs, CategoryModel_ModPlusCong_3_Coeffs, CategoryModel_Full_1_Coeffs, CategoryModel_Full_2_Coeffs, CategoryModel_Full_3_Coeffs, CategoryModel_Full_4_Coeffs)
+
+Category_Coeffs_Full$Model <- c("ReactionTime ~ (1|Participant) + (1|Target)",
+                              "ReactionTime ~ (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod + cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod + cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod + cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod + cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod + cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod*cong + (1|Participant) + (1|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod|Participant) + (1 + mod|Target)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + cong|Participant) + (1 + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)",
+                              "ReactionTime ~ mod*cong + (1 + mod + cong|Participant) + (1 + mod + cong|Target)")
+
+keeps <- c("Model", "Coefficient", "Estimate", "Upper", "Lower", "Pr(>|t|)")
+Category_Coeffs_Full = Category_Coeffs_Full[keeps]
+Category_Coeffs_Full$Upper <- Category_Coeffs_Full$Upper - Category_Coeffs_Full$Estimate
+Category_Coeffs_Full$Lower <- Category_Coeffs_Full$Estimate - Category_Coeffs_Full$Lower
+
+```
+
+```{r message=FALSE, warning=FALSE,fig.height= 10, fig.width=10}
+
+#png("Category_ModelComp1.png", units="in", width=10, height=10, res=300)
+ggplot(Category_Coeffs_Full, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Model)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 1, width=.2,
+                position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+    coord_flip() +
+  ggtitle("Category-Cue Model Comparison Parameter Estimates") + 
+theme(legend.position = "none") +    scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2")
+#dev.off()
+```
+
+```{r message=FALSE, warning=FALSE,fig.height= 5, fig.width=10}
+#png("Category_ModelComp2.png", units="in", width=10, height=4, res=300)
+ggplot(Category_Coeffs_Full, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Coefficient)) +
+  geom_point(position=position_dodge(.9),size = 1.2) +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 0.7, width=.2,
+                position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  #facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+    coord_flip() +
+  ggtitle("Category-Cue Model Comparison Parameter Estimates") + 
+theme(legend.position = "bottom") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "black", size=0.3, alpha = 0.7)
+#dev.off()
+```
+
+```{r message=FALSE, warning=FALSE}
+Category_Coeffs_Full_NoInt <- Category_Coeffs_Full[Category_Coeffs_Full$Coefficient!= "(Intercept)", ]
+```
+
+
+```{r message=FALSE, warning=FALSE,fig.height= 6, fig.width=8}
+
+#png("Category_ModelComp1_NoIntercept.png", units="in", width=8, height=6, res=300)
+ggplot(Category_Coeffs_Full_NoInt, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Model)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 1, width=.2,
+                position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+    coord_flip() +
+  ggtitle("Category-Cue Model Comparison Parameter Estimates") + 
+theme(legend.position = "none") +    
+  scale_fill_brewer(palette = "Set2") +
+    theme(plot.title = element_text(size=8)) +
+  scale_color_brewer(palette = "Set2")
+#dev.off()
+```
+
+```{r message=FALSE, warning=FALSE,fig.height= 5, fig.width=10}
+#png("Category_ModelComp2_NoIntercept.png", units="in", width=10, height=4, res=300)
+ggplot(Category_Coeffs_Full_NoInt, aes(x=Model, y = Estimate, fill = Coefficient, color = Coefficient, group = Coefficient)) +
+  geom_point(position=position_dodge(.9),size = 1.2) +
+  geom_errorbar(aes(ymin=Estimate-Lower, ymax=Estimate+Upper), size = 0.7, width=.2,
+                position=position_dodge(.9)) +
+  scale_fill_brewer(palette = "Dark2") +
+  #facet_wrap(~Coefficient, nrow = 4, scales = "free") +
+    coord_flip() +
+  ggtitle("Category-Cue Model Comparison Parameter Estimates") + 
+theme(legend.position = "bottom")  +   scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "black", size=0.3, alpha = 0.7)
+#dev.off()
+```
+
+
+
+
+
+
+
+```{r preprocessing2, message=FALSE, warning=FALSE}
+
+# read in data:
+Object_ME_3 <- Object %>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+Category_ME_3 <- Category%>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+
+# Change Participant variable to factor
+Object_ME_3$Participant <- factor(Object_ME_3$Participant)
+Object_ME_3$Participant <- factor(Object_ME_3$Participant)
+
+Object_ME_3 <- Object %>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+Category_ME_3 <- Category%>%
+  filter(!Participant %in% c("109", "125", "145", "107", "114"))
+
+Object_ME_3 <- subset(Object_ME_3, select = c(Participant, ReactionTime, Modality,
+                                          Congruency, Target, Cue))
+Category_ME_3 <- subset(Category_ME_3, select = c(Participant, ReactionTime, Modality,
+                                              Congruency, Target, Cue))
+
+Category_ME_3$Participant <- factor(Category_ME_3$Participant)
+Category_ME_3$Participant <- factor(Category_ME_3$Participant)
+
+# Contrast coding of modality (-1 vs. 1)
+Category_ME_3$mod <- ifelse(Category_ME_3$Modality == "Visual", -1, 1)
+Category_ME_3$mod <- ifelse(Category_ME_3$Modality == "Visual", -1, 1)
+
+# Contrast coding of congruency (-1 vs. 1)
+Category_ME_3$cong <- ifelse(Category_ME_3$Congruency == "Congruent", -1, 1)
+Category_ME_3$cong <- ifelse(Category_ME_3$Congruency == "Congruent", -1, 1)
+
+Object_ME_3$Participant <- factor(Object_ME_3$Participant)
+Object_ME_3$Participant <- factor(Object_ME_3$Participant)
+
+# Contrast coding of modality (-1 vs. 1)
+Object_ME_3$mod <- ifelse(Object_ME_3$Modality == "Visual", -1, 1)
+Object_ME_3$mod <- ifelse(Object_ME_3$Modality == "Visual", -1, 1)
+
+# Contrast coding of congruency (-1 vs. 1)
+Object_ME_3$cong <- ifelse(Object_ME_3$Congruency == "Congruent", -1, 1)
+Object_ME_3$cong <- ifelse(Object_ME_3$Congruency == "Congruent", -1, 1)
+
+```
+
+```{r Object Mixed Modela, message=FALSE, warning=FALSE}
+
+# This is the full participant-item model. It includes two predictors, an interaction,
+# random participant effects for intercept and slopes, random item intercept and
+# slopes, and correlations between random effects.
+
+#ObjectModel_Full_RE1  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1|Participant) + (1 |Item), data= Object_ME)
+
+ObjectModel_Full_RE2  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1 + mod+cong|Participant) + (1 + mod+cong|Target) + (1 + mod+cong|Cue), data= Object_ME_3)
+```
+
+```{r Object Summary1, message=FALSE, warning=FALSE}
+summary(ObjectModel_Full_RE2)
+tab_model(ObjectModel_Full_RE2)
+model_parameters(ObjectModel_Full_RE2)
+```
+
+```{r Object Mixed Modelb, message=FALSE, warning=FALSE}
+
+# This is the full participant-item model. It includes two predictors, an interaction,
+# random participant effects for intercept and slopes, random item intercept and
+# slopes, and correlations between random effects.
+
+#ObjectModel_Full_RE1  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1|Participant) + (1 |Item), data= Object_ME)
+
+CategoryModel_Full_RE2  <- lmer(ReactionTime ~ mod+ cong + mod*cong + (1 + mod+cong|Participant) + (1 + mod+cong|Target) + (1 + mod+cong|Cue), data= Category_ME_3)
+```
+
+```{r Object Summary, message=FALSE, warning=FALSE}
+summary(CategoryModel_Full_RE2)
+tab_model(CategoryModel_Full_RE2)
+model_parameters(CategoryModel_Full_RE2)
+```
