@@ -148,7 +148,7 @@ rm(faketable_c, faketable_o)
 ```{r load data}
 # Make file list.
 list_of_files <- list.files(
-  path = "C:/Users/STPI0560/Desktop/Experiments/ObjectCategory_Behavioural/data/raw_data",
+  path = "C:/Users/STPI0560/Desktop/Experiments/ObjectCategory_Behavioural/data",
   recursive = TRUE,
   pattern = "\\.csv$",
   full.names = TRUE
