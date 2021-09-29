@@ -3,26 +3,21 @@ reaction_time_by_trial_number_congruency_split <- function(
   ) {
   
   #'@title Plot reaction time by trial number: Split by congruency.
-  #'
   #'@author Stephen Pierzchajlo
-  #'
   #'@description Plots correlation between reaction time and trial number, split by congruency.
-  #' 
   #'@usage reaction_time_by_trial_number_congruency_split(
   #'dataframe, label.y.1, label.y.2, title, y.lim.min, y.lim.max
   #')
-  #'
   #'@param dataframe The data to be plotted.
   #'@param label.y.1 The lowest y-value to be included.
   #'@param label.y.2 The largest y-value to be included.
   #'@param title Title of graph. In quotations.
   #'@param y.lim.min Adjusts lower linit of data spread.
   #'@param y.lim.max Adjusts upper limit of data spread.
-  #'
   #'@details This function returns a graph with regression lines and data for the correlation between
   #'congruent and incongruent trials. The data and regression lines are further split and colored by
   #'whether they come from congruent or incongruent trials.
-  
+
   ggplot(dataframe,
          aes(trial_number, reaction_time, group = congruency, fill = congruency, color = congruency)) +
     geom_point() +

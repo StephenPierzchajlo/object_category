@@ -1056,23 +1056,23 @@ Additional logic for using this procedure: If I were to flip a coin 48 times, an
 
 #### Ex. 1 
 ```{r abc guessing, warning=FALSE, fig.height=3.5, fig.width=10, echo=FALSE}
-post1 <- draws(24)
-abc_graph(post1, "Participant is guessing")
+#post1 <- draws(24)
+abc_graph(draws(24), "Participant is guessing")
 ```
 *Hypothetical posterior distribution where a participants is guessing.*
 
 #### Ex. 2
 ```{r abc guessing threshold, warning=FALSE, fig.height=3.5, fig.width=10, echo=FALSE}
 # Graph ABC guessing threshold graph.
-post1 <- draws(31)
-abc_graph(post1, "Guessing Threshold")
+#post1 <- draws(31)
+abc_graph(draws(31), "Guessing Threshold")
 ```
 *The lowest acceptable response profile threshold for accuracy (31/48 correct responses): any participant with a lower accuracy score than that which produced this posterior distribution (i.e. response profile <= 30/48) was removed.*
 
 #### Ex. 3
 ```{r abc not guessing, warning=FALSE, fig.height=3.5, fig.width=10, echo=FALSE}
-post1 <- draws(40)
-abc_graph(post1, "Participant Is Not Guessing")
+#post1 <- draws(40)
+abc_graph(draws(40), "Participant Is Not Guessing")
 ```
 *A more typical posterior distribution where participant accuracy is ~ 90%.*
 
