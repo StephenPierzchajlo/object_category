@@ -1,17 +1,18 @@
 ---
 title: "Object-Cue versus Category-Cue Experiment"
 author: "Stephen Pierzchajlo"
-output:
-  rmdformats::material:
+output: github_document
+always_allow_html: true
+  #rmdformats::material:
   #rmdformats::robobook:
   #rmdformats::downcute:
   #rmdformats::readthedown:
-    self_contained: true
-    thumbnails: false
-    lightbox: true
-    gallery: false
-    highlight: tango
-    code_folding: hide
+    #self_contained: true
+    #thumbnails: false
+    #lightbox: true
+    #gallery: false
+    #highlight: tango
+    #code_folding: hide
 ---
 
 # Paper Summary
@@ -20,7 +21,6 @@ output:
 ```{r clear global environment}
 # This function removes the entire global environment!!!
 rm(list = ls())
-#------------------------------------------------------------------------------------------------100
 ```
 
 ```{r load libraries, message=FALSE, warning=FALSE}
@@ -1600,7 +1600,8 @@ plot_power(design_result_13_power, min_n = 1, max_n = 850, desired_power = 80, p
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, fig.width=4, fig.height=4}
 # Save file.
-png(path.expand("../results/power_simulation_13.png"), units = "in", width = 4, height = 4, res = 300)
+png(path.expand("../results/power_simulation_13.png"),
+    units = "in", width = 4, height = 4, res = 300)
 
 # Display graph on .png file.
 power_result_vig_13$plot1

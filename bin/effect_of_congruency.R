@@ -1,15 +1,16 @@
 effect_of_congruency <- function(dataframe, title, ylower, yupper, geomtext_x, geomtext_y){
   
-  #'@title interaction data: dataframe shaper for interaction plotting.
+  #'@title Congruency difference graph.
   #'@author Stephen Pierzchajlo
-  #'@description Takes dataframe and calculates incongruent - congruent difference for plotting.
-  #'@usage interaction_data(dataframe).
-  #'@param dataframe The data to be plotted.
-  #'@details The dataframe must have a column called "congruency" that must only contain the catagories
-  #'"congruent" and "incongruent". The function will split the data into two dataframes containing only
-  #'congruent or incongruent trials, and then bind them side-by-side (i.e. by column). Then it will
-  #'calculate the difference and save that as "diff". The output is useful for graphing the interaction
-  #'between congruency and modality.
+  #'@description Plots congruency difference between modalities with lines connecting individuals.
+  #'@usage effect_of_congruency(dataframe, title, ylower, yupper, geomtext_x, geomtext_y)
+  #'@param dataframe 
+  #'@param title
+  #'@param ylower
+  #'@param yupper
+  #'@param geomtext_x
+  #'@param geomtext_y
+  #'@details 
   
   ggplot(dataframe, aes(y = reaction_time, shape = congruency)) +
     geom_violin(aes(x = congruency, group = congruency, color = congruency,
