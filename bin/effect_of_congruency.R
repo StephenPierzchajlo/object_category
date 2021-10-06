@@ -1,5 +1,4 @@
-effect_of_congruency <- function(dataframe, title, ylower, yupper, geomtext_x, geomtext_y){
-  
+effect_of_congruency <- function(dataframe, title, ylower, yupper, geomtext_x, geomtext_y) {
   #'@title Congruency difference graph.
   #'@author Stephen Pierzchajlo
   #'@description Plots congruency difference between modalities with lines connecting individuals.
@@ -10,8 +9,7 @@ effect_of_congruency <- function(dataframe, title, ylower, yupper, geomtext_x, g
   #'@param yupper
   #'@param geomtext_x
   #'@param geomtext_y
-  #'@details 
-  
+  #'@details This function takes a dataframe made by the coloring() function, and outputs a graph.
   ggplot(dataframe, aes(y = reaction_time, shape = congruency)) +
     geom_violin(aes(x = congruency, group = congruency, color = congruency,
                     fill = congruency, width = .5)) +
