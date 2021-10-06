@@ -3,13 +3,17 @@ effect_of_congruency <- function(dataframe, title, ylower, yupper, geomtext_x, g
   #'@author Stephen Pierzchajlo
   #'@description Plots congruency difference between modalities with lines connecting individuals.
   #'@usage effect_of_congruency(dataframe, title, ylower, yupper, geomtext_x, geomtext_y)
-  #'@param dataframe 
-  #'@param title
-  #'@param ylower
-  #'@param yupper
-  #'@param geomtext_x
-  #'@param geomtext_y
+  #'@param dataframe Dataframe generated from the coloring() function.
+  #'@param title Title to go above graph.
+  #'@param ylower Lowest y-axis value to be included in graph.
+  #'@param yupper Highest y-axis value to be included in graph.
+  #'@param geomtext_x Position of on-graph text along x-axis.
+  #'@param geomtext_y Position of on'graph text along y-axis.
   #'@details This function takes a dataframe made by the coloring() function, and outputs a graph.
+  #'The graph contains difference between congruent and incongruent reaction times for both
+  #' object-cue and category-cue blocks, with lines connecting congruent and incongruent reaction
+  #' times for each participant. The shading of the lines denotes whether difference in performance
+  #' is faster or slower per participant. 
   ggplot(dataframe, aes(y = reaction_time, shape = congruency)) +
     geom_violin(aes(x = congruency, group = congruency, color = congruency,
                     fill = congruency, width = .5)) +

@@ -16,8 +16,9 @@ draws <- function(n_success) {
   #'@description Draws values from a binomial distribution with n successes and calculates 95%
   #'credibility interval.
   #'@usage draws()
-  #'@param n_success Number of successes in n draws.
-  #'@details 
+  #'@param n_success Number of successes in 48 draws.
+  #'@details Takes number of successes out of 48 and calculates this fraction. It then draws 5e5
+  #'samples from a uniform distrubtion of size 48 and calculates 95% CI.
   
   # Number of draws
   n_draws <- 5e5
@@ -30,7 +31,7 @@ draws <- function(n_success) {
   # Non-informed (uniform distribution).
   prior_unif <- runif(n_draws, min = 0, max = 1)
   
-  # Generates n_draws of data withn_participants.
+  # Generates n_draws of data with n_participants.
   a <- rbinom(n = n_draws, size = n_participants, prob = prior_unif)
   
   # Select draws where n_success was generated.
